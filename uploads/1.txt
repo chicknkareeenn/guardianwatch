@@ -1,0 +1,375 @@
+var modal = document.getElementById("myModal");
+    
+// Get the button that opens the modal
+var btn = document.getElementsByClassName("myButton")[0];
+
+var span = document.getElementsByClassName("close")[0];
+
+// When the user clicks the button, open the modal 
+btn.onclick = function() {
+  modal.style.display = "block";
+}
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function() {
+  
+  modal.style.display = "none";
+ 
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+  if (event.target == modal) {
+
+    modal.style.display = "none";
+  }
+}
+
+
+// Get the modal for Payment Updates
+var paymentUpdateModal = document.getElementById("myModal");
+  
+// Get the modal for Pay Now
+var payNowModal = document.getElementById("payNowModal");
+
+// Get all elements with class "paybtn"
+var payBtns = document.querySelectorAll(".paybtn");
+
+// Loop through all pay buttons
+
+
+
+var SpotCash, Mode, policyID, ContactPrice, Quantity, Year, months,  remaining_payment, stat;
+function  Paynow(name, title, contactPrice, modePayment, spotCash, quantity, Status, date, pID, Years, Months, remainingPayment, status){
+  
+  SpotCash = spotCash;
+  Mode = modePayment;
+  policyID = pID;
+  ContactPrice = contactPrice;
+  Quantity = quantity;
+  Year = Years;
+  months = Months;
+  stat = status;
+  remaining_payment = remainingPayment;
+ 
+  var currDate = new Date();
+  var month = currDate.getMonth();
+  var year = currDate.getFullYear();
+  var year1 = currDate.getUTCFullYear()+5;
+   $("#amount").val(SpotCash);
+
+   $('#MM').val(month)
+   $('#yyyy').val(year)
+  console.log(year1);
+   $('#Title').text(title)
+   $('#contactPrice').text('₱' + Number(contactPrice).toLocaleString('en-US', {minimumFractionDigits: 2}));
+   $('#modePayment').text(modePayment)
+   $('#SpotCash').text('₱' + Number(spotCash).toLocaleString('en-US', {minimumFractionDigits: 2}));
+   $('#Quantity').text(quantity)
+   $('#remaining_payment').text('₱' + Number(remainingPayment).toLocaleString('en-US', {minimumFractionDigits: 2}));
+   $('#Status').text(Status)
+   $('#accountName').val(name)
+
+      var options;
+      if(modePayment == "  Annually"){
+          options=["1", "2", "3", "4", "5"];
+      }
+      else if(modePayment == "  Semi-Annually"){
+        options=["1", "2"];
+      }
+      else if(modePayment == "  Quarterly"){
+        options=["1","2","3","4"];
+      }
+    else  if(modePayment == "  Monthly"){
+      options=["1","2","3","4","5","6","7","8","9","10","11","12"];
+      }
+  
+      $.each(options, function(index, value) {
+        $('#select-option').append($('<option>', {
+          value: value.toLowerCase().replace(/\s/g, '-'),
+          text: value
+        }));
+      });
+   var selectedOption; 
+
+    
+    $('#select-option').change(function() {
+      selectedOption = $(this).val();
+      console.log("Selected option:", selectedOption);
+      $("#amount").val( selectedOption * SpotCash )
+      
+    });
+  
+  
+}
+
+
+
+
+ $('#payButton').on('click', function(){
+    
+
+    var selectedOption = $('#select-option').val();
+    var date = new Date();
+    var rfn = $("#referenceNumber").val();
+    var amount = $("#amount").val();
+    var Annually = (ContactPrice/ 5)* Quantity;
+    var year;
+    var month;
+    var total;
+    var Stat = stat;
+    var EquivalentDate;
+
+
+    if (Mode == '  Quarterly') {
+      if (selectedOption == 4) {
+          EquivalentDate = 12;
+      } else if (selectedOption == 3) {
+          EquivalentDate = 9;
+      } else if (selectedOption == 2) {
+          EquivalentDate = 6;
+      } else if (selectedOption == 1) {
+          EquivalentDate = 3;
+      } else {
+          EquivalentDate = 3;
+      }
+  
+      if (months == EquivalentDate && Year == 1) {
+          month = 0;
+          year = 0;
+          total = 0;
+          Stat = 'Completed';
+      } else if (months < EquivalentDate && Year == 1) {
+          month = EquivalentDate - months;
+          total = remaining_payment - amount;
+      } else if (EquivalentDate > months && Year >= 1) {
+          month = EquivalentDate - months;
+          year = Year;
+          total = remaining_payment - amount;
+      } else if (months > EquivalentDate && Year >= 1) {
+          month = months - EquivalentDate;
+          year = Year;
+          total = remaining_payment - amount;
+      } else if (months == 3 || months == 12 && Year > 1) {
+          month = 12 - (months - EquivalentDate);
+          year = Year - 1;
+          total = remaining_payment - amount;
+      }
+  }
+  else if (Mode == '  Annually') {
+    if (selectedOption == 1 && Year == 1) {
+        month = 0;
+        year = 0;
+        total = 0;
+        Stat = 'Completed';
+    } else if (selectedOption > 0 && Year == 1) {
+        month = 12;
+        year = Year - selectedOption;
+        total = remaining_payment - amount;
+    } else if (selectedOption > 0 && Year > 1) {
+        month = 12;
+        year = Year - selectedOption;
+        total = remaining_payment - amount;
+    }
+}
+
+else if (Mode == '  Monthly') {
+  if (selectedOption == 12) {
+      EquivalentDate = 12;
+  } else if (selectedOption == 11) {
+      EquivalentDate = 11;
+  } else if (selectedOption == 10) {
+      EquivalentDate = 10;
+  } else if (selectedOption == 9) {
+      EquivalentDate = 9;
+  } else if (selectedOption == 8) {
+      EquivalentDate = 8;
+  } else if (selectedOption == 7) {
+      EquivalentDate = 7;
+  } else if (selectedOption == 6) {
+      EquivalentDate = 6;
+  } else if (selectedOption == 5) {
+      EquivalentDate = 5;
+  } else if (selectedOption == 4) {
+      EquivalentDate = 4;
+  } else if (selectedOption == 3) {
+      EquivalentDate = 3;
+  } else if (selectedOption == 2) {
+      EquivalentDate = 2;
+  } else if (selectedOption == 1) {
+      EquivalentDate = 1;
+  } else {
+      EquivalentDate = 12;
+  }
+
+  if (months == EquivalentDate && Year == 1) {
+      month = 0;
+      year = 0;
+      total = 0;
+      Stat = 'Completed';
+  } else if (months < EquivalentDate && Year == 1) {
+      month = EquivalentDate - months;
+      total = remaining_payment - amount;
+  } else if (EquivalentDate > months && Year > 1) {
+      month = EquivalentDate - months;
+      year = Year - 1;
+      total = remaining_payment - amount;
+  } else if (months > EquivalentDate && Year >= 1) {
+      month = months - EquivalentDate;
+      year = Year;
+      total = remaining_payment - amount;
+  } else if ((months == 3 || months == 12) && Year > 1) {
+      month = 12 - (months - EquivalentDate);
+      year = Year - 1;
+      total = remaining_payment - amount;
+  }
+}
+
+  
+  
+  
+
+else if (Mode == '  Semi-Annually') {
+  if (selectedOption == 2) {
+      EquivalentDate = 12;
+  } else if (selectedOption == 1) {
+      EquivalentDate = 6;
+  } else {
+      EquivalentDate = 6;
+  }
+
+  if (months == EquivalentDate && Year == 1) {
+      month = 0;
+      year = 0;
+      total = 0;
+      Stat = 'Completed';
+  } else if (months < EquivalentDate && Year == 1) {
+      month = EquivalentDate - months;
+      total = remaining_payment - amount;
+  } else if (EquivalentDate > months && Year >= 1) {
+      month = EquivalentDate - months;
+      year = Year-1;
+      total = remaining_payment - amount;
+  } else if (months > EquivalentDate && Year >= 1) {
+      month = months - EquivalentDate;
+      year = Year;
+      total = remaining_payment - amount;
+  } else if (months == 6 || months == 12 && Year > 1) {
+      month = 12 - (months - EquivalentDate);    
+      year = Year - 1;
+      total = remaining_payment - amount;
+  }
+}
+else if (Mode == 'SpotCash') {
+  month = 0;
+  year = 0;
+  total = 0;
+  Stat = 'Completed';
+}
+
+   
+    console.log(total);
+    console.log(year);
+    console.log(selectedOption)
+    
+    $.ajax({
+      url: 'Planss.php',
+      method: 'POST',
+      data: {
+              rfn: rfn,
+              amount:amount,
+              SpotCash: SpotCash,
+              Mode: Mode,
+              policyID: policyID,
+              date: date,
+              total: total,
+              year: year,
+              month: month,
+              Stat: Stat
+              
+          },
+      success: function(response){
+          console.log(response);
+        
+         
+        },
+      error: function(xhr, status, error){
+          console.error(xhr.responseText);
+        }
+    })
+ });
+
+ 
+
+payBtns.forEach(function(btn) {
+  // Add click event listener to each pay button
+  btn.addEventListener("click", function() {
+    // Display the Pay Now modal when a pay button is clicked
+  
+    payNowModal.style.display = "block";
+  });
+});
+
+document.getElementById('payButton').addEventListener('click', function() {
+  if (confirm('Are you sure you want to proceed with the payment?')) {
+      // User clicked "OK", proceed with the payment
+      // You can put your payment logic here
+
+      // Show a success message
+      alert('Payment successfully done!');
+
+      // Reload the page
+      window.location.reload();
+  } else {
+      // User clicked "Cancel", do nothing
+  }
+});
+
+
+$(document).ready(function() {
+    // Disable the button by default
+    $('#payButton').prop('disabled', true).addClass('disabled');
+
+    // Enable/disable the button based on the reference number input
+    $('#referenceNumber').on('input', function() {
+        if ($(this).val().trim() !== '') {
+            $('#payButton').prop('disabled', false).removeClass('disabled');
+            $('#referenceNumberError').hide();
+        } else {
+            $('#payButton').prop('disabled', true).addClass('disabled');
+            $('#referenceNumberError').show();
+        }
+    });
+
+    // Show error message if reference number is empty when the button is clicked
+    $('#payButton').click(function() {
+        var referenceNumber = $('#referenceNumber').val();
+        if (referenceNumber.trim() === '') {
+            $('#referenceNumberError').show();
+            return false;
+        }
+        $('#referenceNumberError').hide();
+    });
+});
+
+
+
+// Get the <span> element that closes the Pay Now modal
+var payNowCloseBtn = document.querySelector("#payNowModal .close");
+
+// When the user clicks on <span> (x), close the Pay Now modal
+payNowCloseBtn.addEventListener("click", function() {
+  
+  payNowModal.style.display = "none";
+ 
+});
+
+// When the user clicks anywhere outside of the Pay Now modal, close it
+window.addEventListener("click", function(event) {
+  if (event.target == payNowModal) {
+   
+    payNowModal.style.display = "none";
+ 
+  }
+});
+
