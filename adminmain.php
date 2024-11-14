@@ -434,7 +434,7 @@ pg_close($conn);
   }
 
   // WebSocket setup
-  const ws = new WebSocket('ws://localhost:8080');
+  const ws = new WebSocket('wss://reporting-9wym.onrender.com');
 
   ws.onopen = () => {
     console.log('WebSocket connection established');
