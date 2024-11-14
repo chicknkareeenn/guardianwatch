@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "dbcon.php";
+include "dbcon.php";  // Make sure this doesn't output anything before headers
 
 $email = $_POST['username'];
 $pass = $_POST['password'];
@@ -26,72 +26,72 @@ if ($result) {
         $_SESSION['role'] = $row['role'];
         $_SESSION['id'] = $row['id'];
 
-        // Redirect to session.php after 3 seconds (set header)
+        // Redirect before any output
         header('refresh:3; url=session.php');
-
-        // Loading screen design
-        echo "
-        <style>
-            body {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-direction: column;
-                height: 100vh;
-                margin: 0;
-                background-color: #f0f8ff;
-            }
-
-            .loader-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .loader {
-                border: 10px solid #f3f3f3;
-                border-top: 10px solid #184965;
-                border-radius: 50%;
-                width: 100px;
-                height: 100px;
-                animation: spin 1s linear infinite;
-                margin-bottom: 20px;
-            }
-
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-
-            .loading-text {
-                font-family: Arial, sans-serif;
-                font-weight: bold;
-                font-size: 24px;
-                color: #184965;
-                text-align: center;
-                margin-top: 10px;
-                animation: fadeIn 1s ease-in-out infinite alternate;
-            }
-
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-        </style>
-        <body>
-            <div class='loader-container'>
-                <div class='loader'></div>
-                <div class='loading-text'>Logging you in...</div>
-            </div>
-        </body>";
-
-        // Make sure script ends here so no further code is executed
+        // Exit to avoid further output
         exit();
     } else {
         // Handle failed login
         echo "Invalid credentials.";
     }
 } else {
+    // Handle failed query execution
     echo "Failed to execute query.";
 }
+
+// Show loading screen AFTER the redirect headers
+echo "
+<style>
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f8ff;
+    }
+
+    .loader-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .loader {
+        border: 10px solid #f3f3f3;
+        border-top: 10px solid #184965;
+        border-radius: 50%;
+        width: 100px;
+        height: 100px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        font-size: 24px;
+        color: #184965;
+        text-align: center;
+        margin-top: 10px;
+        animation: fadeIn 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+<body>
+    <div class='loader-container'>
+        <div class='loader'></div>
+        <div class='loading-text'>Logging you in...</div>
+    </div>
+</body>";
 ?>
