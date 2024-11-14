@@ -20,7 +20,7 @@ $notif_count = $row['notif_count'];
 // Query to fetch notifications and corresponding user data from residents table
 $sql_notifications = "SELECT notifications.*, residents.fullname, residents.id
                       FROM notifications
-                      JOIN residents ON notifications.user_id = residents.id
+                      JOIN residents ON notifications.userId = residents.id
                       WHERE police_id = '$policeAssign'
                       ORDER BY notifications.notif_id DESC";
 $result_notifications = pg_query($conn, $sql_notifications);
