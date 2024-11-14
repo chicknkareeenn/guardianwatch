@@ -26,10 +26,11 @@ if ($result) {
         $_SESSION['role'] = $row['role'];
         $_SESSION['id'] = $row['id'];
 
+        // Redirect to session.php after 3 seconds (set header)
         header('refresh:3; url=session.php');
 
-        // Show loading screen before redirecting to session.php
-        $loading_screen = "
+        // Loading screen design
+        echo "
         <style>
             body {
                 display: flex;
@@ -84,11 +85,8 @@ if ($result) {
             </div>
         </body>";
 
-        // Display loading screen
-        echo $loading_screen;
+        // Make sure script ends here so no further code is executed
         exit();
-        // Redirect to session.php after a brief delay
-        
     } else {
         // Handle failed login
         echo "Invalid credentials.";
