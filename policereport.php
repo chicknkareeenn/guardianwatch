@@ -184,60 +184,38 @@
                       <?php
 
                        
-                      $sql = "SELECT r.id, u.fullname AS username, r.name,
-    r.category,
-    r.description,
-    DATE_FORMAT(r.file_date, '%b-%d-%Y') AS file_date,
-    r.finish,
-    r.police_assign,
-    r.user_id
-FROM 
-    reports AS r
-INNER JOIN 
-    residents AS u 
-ON 
-    r.user_id = u.id
-WHERE
-    r.police_assign = $policeAssign and r.finish ='Unsettled'";
-                      $result = mysqli_query($conn, $sql);
-                      while ($row = mysqli_fetch_array($result)) {
+            $sql = "
+            SELECT 
+                r.id, 
+                u.fullname AS username, 
+                r.name,
+                r.category,
+                r.description,
+                TO_CHAR(r.file_date, 'Mon-DD-YYYY') AS file_date, 
+                r.finish,
+                r.police_assign,
+                r.user_id
+            FROM 
+                reports AS r
+            INNER JOIN 
+                residents AS u 
+            ON 
+                r.user_id = u.id
+            WHERE
+                r.police_assign = '$policeAssign' AND 
+                r.finish = 'Unsettled';
+            ";
+                    $result = pg_query($conn, $sql);
+                    while ($row = pg_fetch_array($result)) {
                         echo "<tr>";
-                        echo "<td>".$row['username']."</td>";
-                        echo "<td>".$row['name']."</td>";
-                        echo "<td>".$row['category']."</td>";
-                        echo "<td>".$row['description']."</td>";
-                        echo "<td>".$row['file_date']."</td>";
-
+                        echo "<td>" . $row['username'] . "</td>";
+                        echo "<td>" . $row['name'] . "</td>";
+                        echo "<td>" . $row['category'] . "</td>";
+                        echo "<td>" . $row['description'] . "</td>";
+                        echo "<td>" . $row['file_date'] . "</td>";
                         echo "<td>
-                        <button class='btn btn-sm btn-primary' onclick='callmodal1(\"".$row['id']."\", \"".$row['user_id']."\", \"".$row['name']."\", \"".$row['category']."\", \"".$row['description']."\", \"".$row['file_date']."\")'>Update</button> 
+                            <button class='btn btn-sm btn-primary' onclick='callmodal1(\"" . $row['id'] . "\", \"" . $row['user_id'] . "\", \"" . $row['name'] . "\", \"" . $row['category'] . "\", \"" . $row['description'] . "\", \"" . $row['file_date'] . "\")'>Update</button>
                         </td>";
-
-
-
-
-                   
-
-                        
-                     
-                      
-
-              
-                      
-
-
-
-                        
-                       
-
-                        // para sa edit
-                       
-                        // para sa delete
-                       
-                     
-                      
-                      
-
-
                         echo "</tr>";
 
                       }

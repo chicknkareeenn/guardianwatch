@@ -64,8 +64,8 @@ h6 {
 .pagetitle h1 {
   font-size: 24px;
   margin-bottom: 0;
-  font-weight: 600;
-  color: #012970;
+  font-weight: bold;
+  color: #184965;
 }
 
 /*--------------------------------------------------------------
@@ -235,7 +235,7 @@ h6 {
 .card-title {
   padding: 20px 0 15px 0;
   font-size: 18px;
-  font-weight: 500;
+  font-weight: bold;
   color: #012970;
   font-family: "Poppins", sans-serif;
 }
@@ -832,8 +832,8 @@ h6 {
 }
 
 .dashboard .customers-card .card-icon {
-  color: #ff771d;
-  background: #ffecdf;
+  color: #4154f1;
+  background: #b2ebf2;
 }
 
 /* Activity */
@@ -1049,9 +1049,7 @@ h6 {
   max-width: 120px;
 }
 
-/*--------------------------------------------------------------
-# F.A.Q Page
---------------------------------------------------------------*/
+
 .faq .basic h6 {
   font-size: 18px;
   font-weight: 600;
@@ -1062,9 +1060,7 @@ h6 {
   color: #6980aa;
 }
 
-/*--------------------------------------------------------------
-# Contact
---------------------------------------------------------------*/
+
 .contact .info-box {
   padding: 28px 30px;
 }
@@ -1173,9 +1169,7 @@ h6 {
   }
 }
 
-/*--------------------------------------------------------------
-# Error 404
---------------------------------------------------------------*/
+
 .error-404 {
   padding: 30px;
 }

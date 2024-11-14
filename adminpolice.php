@@ -119,20 +119,16 @@
 
                 <div class="card-body">
                   <div class="error-message">
-                        <?php
-                        if (!empty($_GET['error_message'])) {
-
-                          $co = isset($_GET['color']) ? $_GET['color'] : 'p';
-                          if($co == "p"){
-
-                            echo "<div class='alert alert-primary' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
-                          }
-                          else{
-                            echo "<div class='alert alert-danger' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
-
-                          }
-                        }
-                        ?>
+                  <?php
+                    if (!empty($_GET['error_message'])) {
+                      $co = isset($_GET['color']) ? $_GET['color'] : 'p';
+                      if ($co == "p") {
+                        echo "<div class='alert alert-primary' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
+                      } else {
+                        echo "<div class='alert alert-danger' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
+                      }
+                    }
+                    ?>
                     </div>
                 </div>
                 <div class="card-body mt-3">
@@ -156,47 +152,21 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <?php
-
-                  
-                      $sql = "select * from police";
-                      $result = mysqli_query($conn, $sql);
-                      while ($row = mysqli_fetch_array($result)) {
-                        echo "<tr>";
-                        echo "<td>".$row['fullname']."</td>";
-                        echo "<td><img src='upload/".$row['image']."' width='50px' style='border-radius:50%;' data-bs-toggle='modal' data-bs-target='#pic".$row['id']."'></td>";
-                        echo "<td>".$row['username']."</td>";
-                        echo "<td>".$row['contact']."</td>";
-                        echo "<td>".$row['ran']."</td>";
-                        echo "<td>".$row['status']."</td>";
-
-
-                   
-
-                      
-
-
-                          
-                        
-                       
-                                             
-
-              
-                      
-
-
-
-                        
-                       
-
-                       
-                      
-
-
-                        echo "</tr>";
-
-                      }
-                      ?>
+                    <?php
+                // Database query using PostgreSQL
+                $sql = "SELECT * FROM police";
+                $result = pg_query($conn, $sql); // pg_query for PostgreSQL
+                while ($row = pg_fetch_assoc($result)) {
+                  echo "<tr>";
+                  echo "<td>".$row['fullname']."</td>";
+                  echo "<td><img src='upload/".$row['image']."' width='50px' style='border-radius:50%;' data-bs-toggle='modal' data-bs-target='#pic".$row['id']."'></td>";
+                  echo "<td>".$row['username']."</td>";
+                  echo "<td>".$row['contact']."</td>";
+                  echo "<td>".$row['ran']."</td>";
+                  echo "<td>".$row['status']."</td>";
+                  echo "</tr>";
+                }
+                ?>
                     
                       
                     </tbody>

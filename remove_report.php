@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "dbcon.php";
+include "dbcon.php"; // Make sure this file uses pg_connect for PostgreSQL
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -12,17 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    $sql = "DELETE FROM reports WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $reportId);
+    // PostgreSQL query with parameterized input
+    $sql = "DELETE FROM reports WHERE id = $1";
+    $result = pg_query_params($conn, $sql, array($reportId));
 
-    if ($stmt->execute()) {
+    if ($result) {
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to remove report']);
     }
 
-    $stmt->close();
-    $conn->close();
+    // No need to close the statement or connection explicitly in PostgreSQL with pg_query
+    // Since pg_query doesn't require a separate statement object, we don't need $stmt->close() and $conn->close()
 }
 ?>

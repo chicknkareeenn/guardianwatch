@@ -65,7 +65,7 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
         <div class="card recent-sales overflow-auto">
           <div class="card-body">
             <div class="error-message">
-              <?php
+            <?php
                 if (!empty($_GET['error_message'])) {
                   $co = isset($_GET['color']) ? $_GET['color'] : 'p';
                   if($co == "p"){
@@ -92,23 +92,28 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
                 </tr>
               </thead>
               <tbody>
-                <?php
-                  $sql = "SELECT r.id, r.name, r.witness, u.fullname AS User, p.fullname AS Police, r.category, r.description, r.file_date, r.finish 
+              <?php
+                  // PostgreSQL query
+                  $sql = "SELECT r.id, r.name, r.witness, u.fullname AS user, p.fullname AS police, r.category, r.description, r.file_date, r.finish 
                           FROM reports AS r 
                           INNER JOIN police AS p ON r.police_assign = p.id 
                           INNER JOIN residents AS u ON r.user_id = u.id
                           WHERE r.finish = 'Ongoing'";
-                  $result = mysqli_query($conn, $sql);
-                  while ($row = mysqli_fetch_array($result)) {
+
+                  // PostgreSQL query execution
+                  $result = pg_query($conn, $sql);
+                  
+                  // Fetch rows from the result
+                  while ($row = pg_fetch_assoc($result)) {
                     echo "<tr>";
-                    echo "<td>".$row['User']."</td>";
+                    echo "<td>".$row['user']."</td>";
                     echo "<td>".$row['name']."</td>";
                     echo "<td>".$row['category']."</td>";
                     echo "<td>".$row['description']."</td>";
                     echo "<td>".$row['witness']."</td>";
                     echo "<td>".$row['file_date']."</td>";
-                    echo "<td>".$row['Police']."</td>";
-                    echo "<td><button class='btn btn-sm btn-primary'>View</button></td>";
+                    echo "<td>".$row['police']."</td>";
+                    echo "<td><center><a class='btn btn-sm' href='adminviewreports.php?id=".$row['id']."&id2=3' style='background-color: #184965;color: white;'>View</a></center></td>";
                     echo "</tr>";
                   }
                 ?>

@@ -7,14 +7,6 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
     header('location:main.php');
     exit();
 }
-
-// Fetch emergency locations from the database
-$sql = "SELECT location FROM emergency";
-$result = mysqli_query($conn, $sql);
-$locations = [];
-while ($row = mysqli_fetch_assoc($result)) {
-    $locations[] = $row['location'];
-}
 ?>
 
 <!DOCTYPE html>
@@ -23,7 +15,6 @@ while ($row = mysqli_fetch_assoc($result)) {
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
     <title>Guardian Watch</title>
     <meta content="" name="description">
     <meta content="" name="keywords">
@@ -34,7 +25,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
     <!-- Google Fonts -->
     <link href="https://fonts.gstatic.com" rel="preconnect">
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i" rel="stylesheet">
 
     <!-- Vendor CSS Files -->
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -48,11 +39,15 @@ while ($row = mysqli_fetch_assoc($result)) {
 
     <!-- Leaflet CSS File -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
+    <!-- jQuery (required for $ AJAX call) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <!-- Custom CSS for Map Container -->
     <style>
         #map {
-            height: 70vh;
+            height: 80vh;
             width: 100%;
         }
     </style>
@@ -80,69 +75,135 @@ while ($row = mysqli_fetch_assoc($result)) {
 
     <!-- Leaflet JS File -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
 
     <script>
-        // Initialize the map and set view to a default location
-        var map = L.map('map').setView([0, 0], 2);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize the map
+            const map = L.map('map').setView([14.06702850055952, 120.62615777059939], 13);
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            L.control.locate().addTo(map);
 
-        // Function to geocode a location and add a marker to the map
-        function geocodeLocation(location) {
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        var latlng = [data[0].lat, data[0].lon];
+            // Define custom icons
+            const blueCircleIcon = L.icon({
+                iconUrl: 'marker3.gif', // Path to your GIF marker icon
+                iconSize: [50, 50], // Size of the icon
+                iconAnchor: [20, 40], // Point of the icon which will correspond to marker's location
+                popupAnchor: [1, -34], // Point from which the popup should open relative to the iconAnchor
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                shadowSize: [41, 41] // Size of the shadow
+            });
 
-                        // Custom red flag icon for markers
-                        var redIcon = L.icon({
-                            iconUrl: 'assets/img/red-flag.png',
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 32],
-                            popupAnchor: [0, -32]
-                        });
+            // Store markers in an object with their IDs as keys
+            const markerLayers = {};
+            let routingControl;
 
-                        // Add marker with custom icon
-                        var marker = L.marker(latlng, { icon: redIcon }).addTo(map);
-                        map.setView(latlng, 13);
-                    } else {
-                        console.error('Geocoding failed for location: ' + location);
-                    }
-                })
-                .catch(error => console.error('Geocoding error: ', error));
+            // Function to fetch markers from the backend
+            const fetchMarkers = () => {
+    // Remove existing routing control if it exists
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null; // Clear the reference to the routing control
+    }
+
+    $.ajax({
+        url: 'emergencymark.php', // URL of the PHP script that fetches marker data
+        method: 'GET',
+        dataType: 'json',
+        success: (data) => {
+            data.markers.forEach(marker => {
+                if (markerLayers[marker.id]) {
+                    // Update existing marker position if necessary
+                    markerLayers[marker.id].setLatLng([marker.lat, marker.lng]);
+                } else {
+                    // Create a new marker with blue circle icon
+                    const newMarker = L.marker([marker.lat, marker.lng], { icon: blueCircleIcon }).addTo(map);
+                    
+                    // Bind a popup to the marker with the location details
+                    newMarker.bindPopup(`
+                        <b>Location Details:</b><br>${marker.location}<br>
+                        <button class="respond-button" data-marker-id="${marker.id}">Respond</button>
+                    `).on('click', (e) => {
+                        const latLng = e.target.getLatLng();
+                        // Get current location
+                        if (map.locate) {
+                            map.locate({setView: true, maxZoom: 16});
+                            map.on('locationfound', (event) => {
+                                // Remove previous routing
+                                if (routingControl) {
+                                    map.removeControl(routingControl);
+                                }
+
+                                // Add a routing control
+                                routingControl = L.Routing.control({
+                                    waypoints: [
+                                        L.latLng(event.latitude, event.longitude),
+                                        L.latLng(latLng.lat, latLng.lng)
+                                    ],
+                                    routeWhileDragging: true
+                                }).addTo(map);
+                            });
+                        }
+                    });
+                    
+                    // Store the marker in the markerLayers object
+                    markerLayers[marker.id] = newMarker;
+                }
+            });
+
+            // Remove markers that are no longer in the data
+            for (let id in markerLayers) {
+                if (!data.markers.find(marker => marker.id == id)) {
+                    map.removeLayer(markerLayers[id]);
+                    delete markerLayers[id];
+                }
+            }
+        },
+        error: (xhr, status, error) => {
+            console.error('Error fetching marker data:', error);
         }
+    });
+};
 
-        // Array of emergency locations from the database
-        var locations = <?php echo json_encode($locations); ?>;
+            // Fetch markers initially
+            fetchMarkers();
 
-        // Add markers for each location
-        locations.forEach(location => {
-            geocodeLocation(location);
+            // Fetch markers periodically (every 30 seconds)
+            setInterval(fetchMarkers, 30000);
         });
+    </script>
 
-        // Geolocation function to get user's current position
-        function onLocationFound(e) {
-            var latlng = e.latlng;
-            L.marker(latlng).addTo(map)
-                .bindPopup("You are here").openPopup();
-            map.setView(latlng, 13);
-        }
+    <script>
+        $(document).on('click', '.respond-button', function() {
+            const markerId = $(this).data('marker-id');
+            // Optional: Indicate loading state
+            $(this).text('Updating...').attr('disabled', true); // Disable button and change text
 
-        function onLocationError(e) {
-            alert(e.message);
-        }
-
-        // Use the browser's geolocation API
-        map.on('locationfound', onLocationFound);
-        map.on('locationerror', onLocationError);
-
-        map.locate({ setView: true, maxZoom: 16 });
+            $.ajax({
+                url: 'updateEmergencyStatus.php', // URL to the PHP script that updates the status
+                method: 'POST',
+                data: { id: markerId, status: 'Respond' },
+                success: (response) => {
+                    // Handle success, maybe show a message or refresh markers
+                    alert('Emergency status updated to Respond!');
+                    fetchMarkers(); // Refresh markers after updating status
+                },
+                error: (xhr, status, error) => {
+                    console.error('Error updating status:', error);
+                    alert('Failed to update status. Please try again.');
+                },
+                complete: () => {
+                    // Optional: Reset the button after completion
+                    $(this).text('Respond').attr('disabled', false); // Reset button
+                }
+            });
+        });
     </script>
 </body>
-
 </html>

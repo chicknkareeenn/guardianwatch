@@ -153,11 +153,12 @@
           <div class="card-body mt-3">
             <h5 class="card-title">Recent Announcements</h5>
             <ul class="list-group">
-              <?php
+            <?php
+                // PostgreSQL query
                 $sql = "SELECT * FROM announcements ORDER BY created_at DESC";
-                $result = mysqli_query($conn, $sql);
+                $result = pg_query($conn, $sql); // Using pg_query for PostgreSQL
                 
-                while ($row = mysqli_fetch_array($result)) {
+                while ($row = pg_fetch_assoc($result)) {
                     $announcement = $row['announcement'];
                     $files = json_decode($row['files'], true); // Decode the JSON-encoded file paths
                     
@@ -183,7 +184,7 @@
                     echo "<small class='text-muted'>Posted on {$row['created_at']}</small>
                           </li>";
                 }
-                ?>
+              ?>
             </ul>
           </div>
         </div>

@@ -5,6 +5,8 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
     header('location:main.php');
     exit();
 }
+
+$policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
 ?>
 
 <!DOCTYPE html>
@@ -93,23 +95,29 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
               </thead>
               <tbody>
               <?php
-                  $sql = "SELECT r.id, r.name, r.witness, u.fullname AS User, p.fullname AS Police, r.category, r.description, r.file_date, r.finish 
+                  // PostgreSQL Query
+                  $sql = "SELECT r.id, r.name, r.police_assign, r.witness, u.fullname AS user, p.fullname AS police, r.category, r.description, r.file_date, r.finish 
                           FROM reports AS r 
                           INNER JOIN police AS p ON r.police_assign = p.id 
                           INNER JOIN residents AS u ON r.user_id = u.id
-                          WHERE r.finish = 'Ongoing'";
-                  $result = mysqli_query($conn, $sql);
-                  while ($row = mysqli_fetch_array($result)) {
-                    echo "<tr>";
-                    echo "<td>".$row['User']."</td>";
-                    echo "<td>".$row['name']."</td>";
-                    echo "<td>".$row['category']."</td>";
-                    echo "<td>".$row['description']."</td>";
-                    echo "<td>".$row['witness']."</td>";
-                    echo "<td>".$row['file_date']."</td>";
-                    echo "<td>".$row['Police']."</td>";
-                    echo "<td><button class='btn btn-sm btn-primary view-btn' data-id='".$row['id']."' data-user='".$row['User']."' data-name='".$row['name']."' data-category='".$row['category']."' data-description='".$row['description']."' data-witness='".$row['witness']."' data-file_date='".$row['file_date']."' data-police='".$row['Police']."'>View</button></td>";
-                    echo "</tr>";
+                          WHERE r.finish = 'Ongoing' and r.police_assign = '$policeAssign'"; // Using the $policeAssign variable safely
+                  
+                  $result = pg_query($conn, $sql);  // Execute query with pg_query() for PostgreSQL
+                  if ($result) {
+                      while ($row = pg_fetch_assoc($result)) {  // Use pg_fetch_assoc() to fetch rows
+                        echo "<tr>";
+                        echo "<td>".$row['user']."</td>";
+                        echo "<td>".$row['name']."</td>";
+                        echo "<td>".$row['category']."</td>";
+                        echo "<td>".$row['description']."</td>";
+                        echo "<td>".$row['witness']."</td>";
+                        echo "<td>".$row['file_date']."</td>";
+                        echo "<td>".$row['police']."</td>";
+                        echo "<td><center><a class='btn btn-sm' href='policeviewreports.php?id=".$row['id']."&id2=3' style='background-color: #184965;color: white;'>View</a></center></td>";
+                        echo "</tr>";
+                      }
+                  } else {
+                      echo "<tr><td colspan='8'>No records found.</td></tr>";  // Handle no result case
                   }
                 ?>
               </tbody>

@@ -1,16 +1,29 @@
-<?php
+<?php 
 session_start();
-include('dbcon.php'); // Make sure to include your database connection file
+include "dbcon.php";
+if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
+    header('location:main.php');
+    exit();
+}
 
+$policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
+
+// Fetch the notification count from the notifications table
 // Fetch the notification count from the emergency table
-$sql = "SELECT COUNT(*) as notif_count FROM emergency";
-$result = mysqli_query($conn, $sql);
-$row = mysqli_fetch_assoc($result);
+// Fetch the notification count from the notifications table
+// Query to count notifications
+$sql = "SELECT COUNT(*) AS notif_count FROM notifications WHERE police_id = '$policeAssign'";
+$result = pg_query($conn, $sql);
+$row = pg_fetch_assoc($result);
 $notif_count = $row['notif_count'];
 
-// Fetch the notifications from the emergency table
-$sql_notifications = "SELECT * FROM emergency ORDER BY id DESC";
-$result_notifications = mysqli_query($conn, $sql_notifications);
+// Query to fetch notifications and corresponding user data from residents table
+$sql_notifications = "SELECT notifications.*, residents.fullname, residents.id
+                      FROM notifications
+                      JOIN residents ON notifications.user_id = residents.id
+                      WHERE police_id = '$policeAssign'
+                      ORDER BY notifications.notif_id DESC";
+$result_notifications = pg_query($conn, $sql_notifications);
 ?>
 
 <!DOCTYPE html>
@@ -49,8 +62,8 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
                         $id = $_SESSION['id'];
                         $role = $_SESSION['role'];
                         $sql = $role == 'admin' ? "SELECT image, fullname FROM admin WHERE id = '$id'" : "SELECT image, fullname FROM police WHERE id = '$id'";
-                        $result = mysqli_query($conn, $sql);
-                        $row = mysqli_fetch_assoc($result);
+                        $result = pg_query($conn, $sql);
+                        $row = pg_fetch_assoc($result);
                         echo $row['image'];
                     ?>" alt="Profile" class="rounded-circle">
                     <span class="d-none d-md-block dropdown-toggle ps-2"><?php
@@ -104,21 +117,21 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
         <li class="nav-item">
             <a class="nav-link collapsed" href="oncase.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-card-list" style="color: #184965;"></i>
-                <span>On-Going</span>
+                <span>On-Going Reports</span>
             </a>
         </li>
 
         <li class="nav-item">
             <a class="nav-link collapsed" href="closed.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-card-list" style="color: #184965;"></i>
-                <span>Solved Cases</span>
+                <span>Solved Reports</span>
             </a>
         </li>
         
         <li class="nav-item">
             <a class="nav-link collapsed" href="mapsPolice.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-map" style="color: #184965;"></i>
-                <span>Map</span>
+                <span>Emergency Map</span>
             </a>
         </li>
         <li class="nav-item">
@@ -140,20 +153,44 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
 
 <!-- Notification Modal -->
 <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg"> <!-- Use modal-lg for larger modals -->
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="notificationModalLabel">Notifications</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <ul class="list-group">
-                    <?php while ($row = mysqli_fetch_assoc($result_notifications)) { ?>
-                        <li class="list-group-item">
-                            <?php echo $row['location']; ?>
-                        </li>
-                    <?php } ?>
-                </ul>
+                <!-- Display notifications in a table -->
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>User Name</th>
+                            <th>Notification</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php while ($row = pg_fetch_assoc($result_notifications)) { ?>
+                            <tr>
+                                <td><?php echo $row['fullname']; ?></td>
+                                <td><?php echo $row['notif']; ?></td>
+                                <td><?php echo $row['chat_date']; ?></td>
+                                <td>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="handleReply(<?php echo $row['notif_id']; ?>)">
+                                    <i class="bi bi-reply"></i>
+                                </button>
+
+                                 
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                    onclick="handleRemove(this, <?php echo $row['id']; ?>)" data-id="<?php echo $row['notif_id']; ?>">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            </td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -161,6 +198,123 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
         </div>
     </div>
 </div>
+<div class="modal fade" id="conversationModal" tabindex="-1" aria-labelledby="conversationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="conversationModalLabel">Conversation with <span id="userFullName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Conversation chat area -->
+                <div id="chatArea" style="height: 400px; overflow-y: auto; padding: 10px; background-color: #f8f9fa;">
+                    <!-- Chat messages will be dynamically loaded here -->
+                </div>
+
+                <!-- Reply input -->
+                <div class="input-group mt-3">
+                    <input type="text" id="replyMessage" class="form-control" placeholder="Type your message">
+                    <button class="btn btn-primary" type="button" onclick="sendReply()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentNotificationId = null;
+
+function handleReply(notificationId) {
+    currentNotificationId = notificationId; // Store the notification ID
+    console.log("Replying to notification ID:", currentNotificationId); // For debugging
+
+    // Fetch chat history for the given notification ID
+    fetchChatHistory(currentNotificationId);
+}
+
+function fetchChatHistory(notificationId) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'fetch_chat_history.php?notification_id=' + notificationId, true);
+    xhr.onload = function () {
+        if (this.status === 200) {
+            const response = JSON.parse(this.responseText);
+            console.log(response); // Log the response for debugging
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = '';
+
+            // Display notification message
+            const notificationMessage = document.createElement('div');
+            notificationMessage.style.marginBottom = '10px';
+            notificationMessage.style.padding = '10px';
+            notificationMessage.style.backgroundColor = '#f1f1f1';
+            notificationMessage.style.borderRadius = '10px';
+            notificationMessage.innerHTML = `<strong>Notification:</strong> ${response.notif}`;
+            chatArea.appendChild(notificationMessage);
+
+            // Display user's full name
+            document.getElementById('userFullName').innerText = response.fullname;
+
+            // Load chat messages
+            response.messages.forEach(msg => {
+                const messageBubble = document.createElement('div');
+                messageBubble.style.marginBottom = '10px';
+                messageBubble.style.padding = '5px 8px';
+                messageBubble.style.borderRadius = '10px';
+
+                if (msg.sender_role === 'user') {
+                    messageBubble.style.backgroundColor = '#e2e3e5';
+                    messageBubble.style.textAlign = 'left';
+                    messageBubble.innerHTML = `<strong>${response.fullname}:</strong> ${msg.message}`;
+                } else {
+                    messageBubble.style.backgroundColor = '#0d6efd';
+                    messageBubble.style.color = 'white';
+                    messageBubble.style.textAlign = 'right';
+                    messageBubble.innerHTML = `<strong>Police:</strong> ${msg.message}`;
+                }
+
+                chatArea.appendChild(messageBubble);
+            });
+
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            const conversationModal = new bootstrap.Modal(document.getElementById('conversationModal'));
+            conversationModal.show();
+        } else {
+            console.error('Error fetching chat history:', this.status, this.statusText);
+        }
+    };
+    xhr.send();
+}
+
+function sendReply() {
+    const replyMessage = document.getElementById('replyMessage').value;
+    if (replyMessage.trim() === '') {
+        alert('Please enter a message.');
+        return;
+    }
+
+    // Send reply via AJAX
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'send_reply.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = function () {
+        if (this.status === 200) {
+            const response = JSON.parse(this.responseText);
+            if (response.success) {
+                // Clear the input field and reload the conversation
+                document.getElementById('replyMessage').value = '';
+                fetchChatHistory(currentNotificationId); // Reload chat history
+            } else {
+                alert('Failed to send reply: ' + response.error);
+            }
+        }
+    };
+    
+    // Include the notification ID in the POST request
+    xhr.send(`notification_id=${currentNotificationId}&reply_message=${encodeURIComponent(replyMessage)}`);
+}
+
+</script>
 
 </body>
 </html>

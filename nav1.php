@@ -1,16 +1,16 @@
 <?php
 session_start();
-include('dbcon.php'); // Make sure to include your database connection file
+include('dbcon.php'); // Ensure dbcon.php connects to PostgreSQL
 
 // Fetch the notification count from the emergency table
-$sql = "SELECT COUNT(*) as notif_count FROM emergency";
-$result = mysqli_query($conn, $sql);
-$row = mysqli_fetch_assoc($result);
+$sql = "SELECT COUNT(*) as notif_count FROM emergency WHERE status != 'Respond' OR status = ''";
+$result = pg_query($conn, $sql);
+$row = pg_fetch_assoc($result);
 $notif_count = $row['notif_count'];
 
 // Fetch the notifications from the emergency table
-$sql_notifications = "SELECT * FROM emergency ORDER BY id DESC";
-$result_notifications = mysqli_query($conn, $sql_notifications);
+$sql_notifications = "SELECT * FROM emergency WHERE status != 'Respond' OR status IS NULL ORDER BY id DESC";
+$result_notifications = pg_query($conn, $sql_notifications);
 ?>
 
 <!DOCTYPE html>
@@ -48,9 +48,9 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
                     <img src="upload/<?php
                         $id = $_SESSION['id'];
                         $role = $_SESSION['role'];
-                        $sql = $role == 'admin' ? "SELECT image, fullname FROM admin WHERE id = '$id'" : "SELECT image, fullname FROM police WHERE id = '$id'";
-                        $result = mysqli_query($conn, $sql);
-                        $row = mysqli_fetch_assoc($result);
+                        $sql = $role == 'admin' ? "SELECT image, fullname FROM admin WHERE id = $1" : "SELECT image, fullname FROM police WHERE id = $1";
+                        $result = pg_query_params($conn, $sql, array($id));
+                        $row = pg_fetch_assoc($result);
                         echo $row['image'];
                     ?>" alt="Profile" class="rounded-circle">
                     <span class="d-none d-md-block dropdown-toggle ps-2"><?php
@@ -109,21 +109,21 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
         <li class="nav-item">
             <a class="nav-link collapsed" href="adminoncase.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-card-list" style="color: #184965;"></i>
-                <span>On-Going</span>
+                <span>On-Going Reports</span>
             </a>
         </li>
         
         <li class="nav-item">
             <a class="nav-link collapsed" href="mapss.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-map" style="color: #184965;"></i>
-                <span>Map</span>
+                <span>Emergency Map</span>
             </a>
         </li>
         
         <li class="nav-item">
             <a class="nav-link collapsed" href="reject.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-x-circle" style="color: #184965;"></i>
-                <span>Reject Reports</span>
+                <span>Rejected Reports</span>
             </a>
         </li>
 
@@ -141,7 +141,7 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
             </div>
             <div class="modal-body">
                 <ul class="list-group">
-                    <?php while ($row = mysqli_fetch_assoc($result_notifications)) { ?>
+                    <?php while ($row = pg_fetch_assoc($result_notifications)) { ?>
                         <li class="list-group-item">
                             <?php echo $row['location']; ?>
                         </li>
@@ -149,7 +149,10 @@ $result_notifications = mysqli_query($conn, $sql_notifications);
                 </ul>
             </div>
             <div class="modal-footer">
+                <!-- Close button -->
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <!-- New "View Map" button that redirects to mapss.php -->
+                <a href="mapss.php" class="btn btn-primary">View Map</a>
             </div>
         </div>
     </div>

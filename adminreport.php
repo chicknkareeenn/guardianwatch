@@ -119,20 +119,16 @@
 
                 <div class="card-body">
                   <div class="error-message">
-                        <?php
-                        if (!empty($_GET['error_message'])) {
-
-                          $co = isset($_GET['color']) ? $_GET['color'] : 'p';
-                          if($co == "p"){
-
-                            echo "<div class='alert alert-primary' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
-                          }
-                          else{
-                            echo "<div class='alert alert-danger' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
-
-                          }
-                        }
-                        ?>
+                          <?php
+                            if (!empty($_GET['error_message'])) {
+                                $co = isset($_GET['color']) ? $_GET['color'] : 'p';
+                                if ($co == "p") {
+                                    echo "<div class='alert alert-primary' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
+                                } else {
+                                    echo "<div class='alert alert-danger' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
+                                }
+                            }
+                            ?>
                     </div>
                 </div>
                 <div class="card-body mt-3">
@@ -155,70 +151,34 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <?php
+                    <?php
+                                // PostgreSQL query syntax
+                                $sql = "
+                                    SELECT r.id, u.fullname AS username, r.name, 
+                                           r.category, r.description, r.file_date, 
+                                           r.finish, r.witness, r.status
+                                    FROM reports AS r
+                                    INNER JOIN residents AS u ON r.user_id = u.id
+                                    WHERE r.status = 'Acceptable' AND r.finish = '';
+                                ";
 
-                       
-                      $sql = "SELECT r.id, u.fullname AS username, r.name,
-    r.category,
-    r.description,
-    r.file_date,
-    r.finish,
-    r.witness
-FROM 
-    reports AS r
-INNER JOIN 
-    residents AS u 
-ON 
-    r.user_id = u.id
-WHERE
-    r.finish !='Reject' and r.finish !='Requirements' and r.finish !='Ongoing' and r.finish != 'Unsettled'";
-                      $result = mysqli_query($conn, $sql);
-                      while ($row = mysqli_fetch_array($result)) {
-                        echo "<tr>";
-                        echo "<td>".$row['username']."</td>";
-                        echo "<td>".$row['name']."</td>";
-                        echo "<td>".$row['category']."</td>";
-                        echo "<td>".$row['description']."</td>";
-                        echo "<td>".$row['file_date']."</td>";
-                        echo "<td>".$row['witness']."</td>";
-
-                        echo "<td>
-                        <button class='btn btn-sm btn-primary' onclick='callmodal1(\"".$row['id']."\")'>Assign</button> 
-
-                        ";
-                         echo"<button class='btn btn-danger btn-sm' onclick='callmodal(\"".$row['id']."\")'>Reject</button>
-                        </td>";
-
-
-
-
-                   
-
-                        
-                     
-                      
-
-              
-                      
-
-
-
-                        
-                       
-
-                        // para sa edit
-                       
-                        // para sa delete
-                       
-                     
-                      
-                      
-
-
-                        echo "</tr>";
-
-                      }
-                      ?>
+                                // Use PostgreSQL connection
+                                $result = pg_query($conn, $sql); // `pg_query` for PostgreSQL
+                                while ($row = pg_fetch_assoc($result)) {
+                                    echo "<tr>";
+                                    echo "<td>" . $row['username'] . "</td>";
+                                    echo "<td>" . $row['name'] . "</td>";
+                                    echo "<td>" . $row['category'] . "</td>";
+                                    echo "<td>" . $row['description'] . "</td>";
+                                    echo "<td>" . $row['file_date'] . "</td>";
+                                    echo "<td>" . $row['witness'] . "</td>";
+                                    echo "<td>
+                                        <button class='btn btn-sm btn-primary' onclick='callmodal1(\"" . $row['id'] . "\", \"" . $row['category'] . "\")'>Assign</button>
+                                        <button class='btn btn-danger btn-sm' onclick='callmodal(\"" . $row['id'] . "\")'>Reject</button>
+                                    </td>";
+                                    echo "</tr>";
+                                }
+                                ?>
                     
                       
                     </tbody>
@@ -283,59 +243,68 @@ WHERE
                         </div>
                       </div>
 
-<div class='modal fade' id="asign" tabindex='-1' aria-labelledby='exampleModalLabel' aria-hidden='true'>
+                      <div class='modal fade' id="asign" tabindex='-1' aria-labelledby='exampleModalLabel' aria-hidden='true'>
                         <div class='modal-dialog'>
-                          <div class='modal-content'>
-                            <div class='modal-header bg-primary text-white'>
-                              <h1 class='modal-title fs-5' id='exampleModalLabel'>Assign Police</h1>
-                              <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+                            <div class='modal-content'>
+                                <div class='modal-header bg-primary text-white'>
+                                    <h1 class='modal-title fs-5' id='exampleModalLabel'>Assign Police</h1>
+                                    <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+                                </div>
+                                <div class='modal-body'>
+                                    <form action='assignreport.php' method='post'>
+                                        <input type='hidden' id="arrid1" name='id'>
+                                        <input type='hidden' id="category" name='category'> <!-- Hidden field for category -->
+
+                                        <select class="form-select" aria-label="Default select example" name="police" id="police-select">
+                                            <option selected>Open this select menu</option>
+                                            <!-- Options will be filled by JavaScript -->
+                                        </select>
+                                        <div class='modal-footer'>
+                                          <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                                          <button type='submit' class='btn btn-primary'>Assign</button>
+                                      </div>
+                                    </form>
+                                </div>
+                                
                             </div>
-                            <div class='modal-body'>
-                              <form action='assignreport.php' method='post'>
-                              <input type='hidden' id="arrid1" name='id' >
-
-                                <select class="form-select" aria-label="Default select example" name="police">
-                                  <option selected>Open this select menu</option>
-
-                                 <?php
-                                  $sql = 'SELECT * FROM police WHERE status != "Not Available"';
-                                  $result = mysqli_query($conn, $sql);
-
-                                  while ($row = mysqli_fetch_array($result)) {
-                                      echo "<option value='" . $row['id'] . "'>" . $row['fullname'] . "</option>";
-                                  }
-                                  ?>
-                                </select>
-                                                                               
-                            </div>
-                            <div class='modal-footer'>
-                              <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
-                              <button type='submit' class='btn btn-primary' >Assign</button>
-                              </form>
-
-                            </div>
-                          </div>
                         </div>
-                      </div>
+                    </div>
 
 <script type="text/javascript">
-  
-  function callmodal(id){
-document.getElementById("arrid").value = id;
-    console.log(id);
-// document.getElementById("modaltitle").innerText = "Cage " +  id;
-    var myModal = new bootstrap.Modal(document.getElementById('arr'));
-    myModal.show();
+function callmodal1(reportId, category) {
+    document.getElementById("arrid1").value = reportId;
+    document.getElementById("category").value = category; // Set the category in the hidden field
 
-  }
-  function callmodal1(id){
-document.getElementById("arrid1").value = id;
-    console.log(id);
-// document.getElementById("modaltitle").innerText = "Cage " +  id;
+    // Fetch police based on the category
+    fetchPoliceByCategory(category);
+
     var myModal = new bootstrap.Modal(document.getElementById('asign'));
     myModal.show();
+}
 
-  }
+function fetchPoliceByCategory(category) {
+    const policeSelect = document.getElementById("police-select");
+    policeSelect.innerHTML = ""; // Clear previous options
+
+    // Fetch police officers based on the category
+    fetch(`fetchPolice.php?category=${category}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                data.forEach(police => {
+                    const option = document.createElement("option");
+                    option.value = police.id;
+                    option.textContent = police.fullname;
+                    policeSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement("option");
+                option.textContent = "No police available for this category";
+                policeSelect.appendChild(option);
+            }
+        })
+        .catch(error => console.error('Error fetching police:', error));
+}
 </script>
 <script>
   document.addEventListener('DOMContentLoaded', (event) => {

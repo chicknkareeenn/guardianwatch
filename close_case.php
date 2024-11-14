@@ -5,17 +5,20 @@ include "dbcon.php";
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id = intval($_POST['id']);
 
-    $sql = "UPDATE reports SET finish = 'Closed' WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $id);
+    // PostgreSQL query with placeholders
+    $sql = "UPDATE reports SET finish = 'Closed' WHERE id = $1";
 
-    if ($stmt->execute()) {
+    // Use pg_query_params for executing the query with parameter binding
+    $result = pg_query_params($conn, $sql, array($id));
+
+    if ($result) {
         echo 'success';
     } else {
-        echo 'error';
+        // Handle error if query fails
+        echo 'error: ' . pg_last_error($conn);
     }
 
-    $stmt->close();
-    $conn->close();
+    // No need for closing statements like in mysqli, just closing the connection
+    pg_close($conn);
 }
 ?>

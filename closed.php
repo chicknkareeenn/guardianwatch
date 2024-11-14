@@ -181,44 +181,44 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <?php
+                    <?php
 
-                       
-                      $sql = "SELECT r.id, u.fullname AS username, r.name,
-    r.category,
-    r.description,
-    DATE_FORMAT(r.file_date, '%b-%d-%Y') AS file_date,
-    r.finish,
-    r.police_assign,
-    r.user_id
-FROM 
-    reports AS r
-INNER JOIN 
-    residents AS u 
-ON 
-    r.user_id = u.id
-WHERE
-    r.police_assign = $policeAssign and r.finish ='Closed'";
-                      $result = mysqli_query($conn, $sql);
-                      while ($row = mysqli_fetch_array($result)) {
-                        echo "<tr>";
-                        echo "<td>".$row['username']."</td>";
-                        echo "<td>".$row['name']."</td>";
-                        echo "<td>".$row['category']."</td>";
-                        echo "<td>".$row['description']."</td>";
-                        echo "<td>".$row['file_date']."</td>";
-                        echo "<td>
-                                <button class='btn btn-sm btn-primary remove-btn' 
-                                        data-id='".$row['id']."' 
-                                        data-username='".$row['username']."' 
-                                        data-name='".$row['name']."' 
-                                        data-category='".$row['category']."' 
-                                        data-description='".$row['description']."' 
-                                        data-file_date='".$row['file_date']."'>Remove</button>
-                              </td>";
-                        echo "</tr>";
-                    }
-                      ?>
+// Update the SQL query for PostgreSQL
+$sql = "SELECT r.id, u.fullname AS username, r.name,
+        r.category,
+        r.description,
+        TO_CHAR(r.file_date, 'Mon-DD-YYYY') AS file_date,
+        r.finish,
+        r.police_assign,
+        r.user_id
+        FROM reports AS r
+        INNER JOIN residents AS u 
+        ON r.user_id = u.id
+        WHERE r.police_assign = $policeAssign AND r.finish = 'Closed'";
+
+// Execute query using PostgreSQL
+$result = pg_query($conn, $sql);
+
+// Loop through the result rows
+while ($row = pg_fetch_array($result)) {
+    echo "<tr>";
+    echo "<td>".$row['username']."</td>";
+    echo "<td>".$row['name']."</td>";
+    echo "<td>".$row['category']."</td>";
+    echo "<td>".$row['description']."</td>";
+    echo "<td>".$row['file_date']."</td>";
+    echo "<td>
+            <button class='btn btn-sm btn-primary remove-btn' 
+                    data-id='".$row['id']."' 
+                    data-username='".$row['username']."' 
+                    data-name='".$row['name']."' 
+                    data-category='".$row['category']."' 
+                    data-description='".$row['description']."' 
+                    data-file_date='".$row['file_date']."'>Remove</button>
+          </td>";
+    echo "</tr>";
+}
+?>
                     
                       
                     </tbody>

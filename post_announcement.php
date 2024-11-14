@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "dbcon.php";
+include "dbcon.php"; // Including your PostgreSQL connection
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $announcement = $_POST['announcement'];
@@ -43,11 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Convert file paths to JSON format for storage
     $filePathsJson = json_encode($filePaths);
 
-    // Insert announcement and file paths into database
-    $stmt = $conn->prepare("INSERT INTO announcements (announcement, files, police_id) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $announcement, $filePathsJson, $police_id);
+    // Use pg_query_params for PostgreSQL prepared statements
+    $query = "INSERT INTO announcements (announcement, files, police_id) VALUES ($1, $2, $3)";
+    $result = pg_query_params($conn, $query, array($announcement, $filePathsJson, $police_id));
 
-    if ($stmt->execute()) {
+    if ($result) {
         // Notify users about the new announcement
         $notifyUrl = 'http://192.168.1.13:8000/notifications';
         $notificationData = array(
@@ -78,10 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         header("Location: announce.php?success_message=Announcement posted successfully");
     } else {
         // Redirect with error message
-        header("Location: announce.php?error_message=Error posting announcement: " . $stmt->error);
+        header("Location: announce.php?error_message=Error posting announcement: " . pg_last_error($conn));
     }
-
-    $stmt->close();
-    $conn->close();
 }
 ?>

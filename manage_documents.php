@@ -1,10 +1,20 @@
 <?php 
  session_start();
-   include "dbcon.php";
-  if (!isset($_SESSION['role']) ||(trim ($_SESSION['role']) == '')) {
-        header('location:main.php');
-        exit();
-    }  ?>
+ include "dbcon.php";  // Assuming dbcon.php contains PostgreSQL connection setup
+
+ if (!isset($_SESSION['role']) ||(trim ($_SESSION['role']) == '')) {
+    header('location:main.php');
+    exit();
+}
+
+if (isset($_GET['category'])) {
+    $_SESSION['category'] = $_GET['category'];
+}
+
+if (isset($_GET['status'])) {
+    $_SESSION['status'] = $_GET['status'];  // Set the session status based on folder click
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -20,7 +30,6 @@
   <!-- Favicons -->
   <link href="logo.png" rel="icon">
   <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
-
 
   <!-- Google Fonts -->
   <link href="https://fonts.gstatic.com" rel="preconnect">
@@ -38,34 +47,24 @@
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
 
-  <!-- =======================================================
-  * Template Name: NiceAdmin
-  * Updated: Nov 17 2023 with Bootstrap v5.3.2
-  * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
   <style type="text/css">
     .error-message {
             height: 10px; /* Fixed height for the error message container */
             margin-bottom: 10px;
             margin-top: 10px;
-
         }
   </style>
 </head>
 
 <body>
   <?php
-    include "nav1.php";
+    include "nav3.php";  // Assuming this file includes the navigation
   ?>
-  
-  
 
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Reject Report</h1>
+      <h1>Files</h1>
 
       <nav>
        
@@ -80,68 +79,42 @@
                   <div class="error-message">
                         <?php
                         if (!empty($_GET['error_message'])) {
-
                           $co = isset($_GET['color']) ? $_GET['color'] : 'p';
                           if($co == "p"){
-
                             echo "<div class='alert alert-primary' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
                           }
                           else{
                             echo "<div class='alert alert-danger' style='text-align:center;' role='alert'> " . $_GET['error_message'] . "</div>";
-
                           }
                         }
                         ?>
                     </div>
                 </div>
                 <div class="card-body mt-3">
-
-                  <!-- <h5 class="card-title">Landlord List</h5> -->
+                  <form action="documents1.php" method="post">
+                  <div class="input-group mb-5">
+                  <input type="text" class="form-control" placeholder="User name" required  name="username" aria-label="Recipient's username" aria-describedby="button-addon2">
+                  <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Search</button>
+                  <a class="btn btn-outline-secondary" type="button" id="button-addon2" href="documents.php">Reset</a>
+                </div>
+                </form>
                   
-
-                  <table class="table table-borderless datatable mt-2" id="data-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">User</th>
-                        <th scope="col">Case</th>
-                        <th scope="col">Details</th>
-                        <th scope="col">Filed_Date</th>       
-                        <th scope="col">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    <?php
-
-// PostgreSQL query
-$sql = "SELECT r.id, r.name,
-           r.police_assign,
-           r.category,
-           r.description,
-           r.file_date,
-           r.finish
-        FROM reports AS r
-        INNER JOIN residents AS u 
-        ON r.user_id = u.id
-        WHERE r.finish = 'Reject'";
-
-// Executing the query using PostgreSQL
-$result = pg_query($conn, $sql);
-
-// Fetching the results
-while ($row = pg_fetch_assoc($result)) {
-  echo "<tr>";
-  echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['category']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['description']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['file_date']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['finish']) . "</td>";
-  echo "</tr>";
-}
-?>
-                    
-                      
-                    </tbody>
-                  </table>
+                  <div class="container text-center ">
+                  <div class="row row-cols-2 row-cols-sm-2 row-cols-md-6">
+                  <?php
+                // Folders are the same
+                $folders = ['Unsettled', 'Ongoing', 'Solved'];
+                foreach ($folders as $folder) {
+                    echo "<div class='col'>";
+                    echo "<a href='residents.php?status=" . urlencode($folder) . "&category=" . urlencode($_SESSION['category']) .  "'>";
+                    echo "<img src='folder.png' width='50px' class='mb-2'>";
+                    echo "<div>" . htmlspecialchars($folder) . "</div>";
+                    echo "</a>";
+                    echo "</div>";
+                }
+                ?>
+                  </div>
+                </div>
 
                 </div>
 
@@ -152,9 +125,8 @@ while ($row = pg_fetch_assoc($result)) {
 
   </main>
 
-  
-
   <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+
   <!-- Vendor JS Files -->
   <script src="assets/vendor/apexcharts/apexcharts.min.js"></script>
   <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -169,6 +141,4 @@ while ($row = pg_fetch_assoc($result)) {
   <script src="assets/js/main.js"></script>
 
 </body>
-
 </html>
-

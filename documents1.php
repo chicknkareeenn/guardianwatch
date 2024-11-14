@@ -1,3 +1,4 @@
+
 <?php 
  session_start();
    include "dbcon.php";
@@ -13,7 +14,7 @@
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Guardian Watch</title>
+  <title>Dorm Scout</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -57,7 +58,7 @@
 
 <body>
   <?php
-    include "nav1.php";
+    include "nav3.php";
   ?>
   
   
@@ -65,7 +66,7 @@
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Reject Report</h1>
+      <h1><a href='documents.php'>Files</a> > Search : <?php echo $_POST['username']?></h1>
 
       <nav>
        
@@ -95,53 +96,47 @@
                     </div>
                 </div>
                 <div class="card-body mt-3">
-
-                  <!-- <h5 class="card-title">Landlord List</h5> -->
+                  <form action="additionalfiles1.php" method="post">
+                  <div class="input-group mb-5">
+                  <input type="text" class="form-control" placeholder="User name" name="username" required aria-label="Recipient's username" aria-describedby="button-addon2">
+                  <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Search</button>
+                  <a class="btn btn-outline-secondary" type="button" id="button-addon2" href="additionalfiles.php">Reset</a>
+                </div>
+                </form>
                   
-
-                  <table class="table table-borderless datatable mt-2" id="data-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">User</th>
-                        <th scope="col">Case</th>
-                        <th scope="col">Details</th>
-                        <th scope="col">Filed_Date</th>       
-                        <th scope="col">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <div class="container text-center ">
+                  <div class="row row-cols-2 row-cols-sm-2 row-cols-md-6">
                     <?php
+$user = $_POST['username'];
+$id = $_SESSION['id'];
+$sql = "SELECT a.filename,a.file_date,a.police,a.notes,a.reportId, 
+        u.fullname,
+        a.user_id 
+        FROM files as a 
+        INNER JOIN residents as u 
+        ON a.user_id = u.id 
+        WHERE a.police = '$id' 
+        AND u.fullname LIKE '%$user%'  
+        GROUP BY fullname";
 
-// PostgreSQL query
-$sql = "SELECT r.id, r.name,
-           r.police_assign,
-           r.category,
-           r.description,
-           r.file_date,
-           r.finish
-        FROM reports AS r
-        INNER JOIN residents AS u 
-        ON r.user_id = u.id
-        WHERE r.finish = 'Reject'";
+$result = mysqli_query($conn, $sql);
 
-// Executing the query using PostgreSQL
-$result = pg_query($conn, $sql);
-
-// Fetching the results
-while ($row = pg_fetch_assoc($result)) {
-  echo "<tr>";
-  echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['category']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['description']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['file_date']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['finish']) . "</td>";
-  echo "</tr>";
+// Check if there are any results
+if (mysqli_num_rows($result) > 0) {
+    while ($row = mysqli_fetch_array($result)) {
+         echo "<div class='col '>
+        <a href='showfiles.php?id=".$row['user_id']."'><img src='folder.png' width='50px' class='mb-2'>
+        <div>".$row['fullname']."</div></a>
+      </div>";
+    }
+} else {
+    // No records found
+    echo "<div class='col'>No records found.</div>";
 }
 ?>
-                    
-                      
-                    </tbody>
-                  </table>
+                  </div>
+                </div>
+                  
 
                 </div>
 
@@ -170,5 +165,9 @@ while ($row = pg_fetch_assoc($result)) {
 
 </body>
 
+
+
+
 </html>
+
 

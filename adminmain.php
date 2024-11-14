@@ -7,41 +7,86 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
     exit();
 }
 
-// Query to count reports where finish is 'Unsettled'
-$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish = ''";
-$result = mysqli_query($conn, $sql);
+$selected_year = isset($_POST['year']) ? intval($_POST['year']) : date("Y");
 
-if ($result) {
-    $row = mysqli_fetch_assoc($result);
-    $count = $row['count'];
-} else {
-    $count = 0;
+// Query to count new reports for the selected year
+$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish = '' AND EXTRACT(YEAR FROM file_date) = $selected_year";
+$result = pg_query($conn, $sql);
+
+$count = ($result) ? pg_fetch_result($result, 0, 'count') : 0;
+
+// Query to count available police
+$sql_police = "SELECT COUNT(*) AS police_count FROM police WHERE status = 'Available'";
+$result_police = pg_query($conn, $sql_police);
+
+$police_count = ($result_police) ? pg_fetch_result($result_police, 0, 'police_count') : 0;
+
+// Query to count ongoing cases for the selected year
+$sql_cases = "SELECT COUNT(*) AS ongoing_count FROM reports WHERE finish = 'Ongoing' AND EXTRACT(YEAR FROM file_date) = $selected_year";
+$result_cases = pg_query($conn, $sql_cases);
+
+$ongoing_count = ($result_cases) ? pg_fetch_result($result_cases, 0, 'ongoing_count') : 0;
+
+// Query to get total crimes by category for the selected year
+$sql_category = "SELECT category, COUNT(*) AS category_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year GROUP BY category";
+$result_category = pg_query($conn, $sql_category);
+$category_data = [];
+$category_labels = [];
+$category_counts = [];
+
+while ($row_category = pg_fetch_assoc($result_category)) {
+    $category_labels[] = $row_category['category'];
+    $category_counts[] = $row_category['category_count'];
 }
 
-// Query to count all available police
-$sql_police = "SELECT COUNT(*) AS police_count FROM police where status = 'Available'";
-$result_police = mysqli_query($conn, $sql_police);
+// Query to get total crimes reported by month for the selected year
+$sql_monthly = "
+SELECT 
+    TO_CHAR(file_date, 'YYYY-Mon') AS month,
+    COUNT(*) AS total_crimes
+FROM 
+    reports
+WHERE 
+    EXTRACT(YEAR FROM file_date) = $selected_year
+GROUP BY 
+    month
+ORDER BY 
+    month
+";
+$result_monthly = pg_query($conn, $sql_monthly);
 
-if ($result_police) {
-    $row_police = mysqli_fetch_assoc($result_police);
-    $police_count = $row_police['police_count'];
-} else {
-    $police_count = 0;
+$monthly_data = [];
+$monthly_labels = [];
+
+if ($result_monthly) {
+    while ($row_monthly = pg_fetch_assoc($result_monthly)) {
+        $monthly_labels[] = $row_monthly['month']; // Store month in YYYY-MMM format
+        $monthly_data[] = $row_monthly['total_crimes']; // Store the count of crimes
+    }
 }
 
-// Query to count ongoing cases
-$sql_cases = "SELECT COUNT(*) AS ongoing_count FROM reports WHERE finish = 'Ongoing'";
-$result_cases = mysqli_query($conn, $sql_cases);
+// Query to get emergency locations for the selected year
+$sql_emergency = "SELECT location, lat FROM emergency WHERE EXTRACT(YEAR FROM report_date) = $selected_year";
+$result_emergency = pg_query($conn, $sql_emergency);
 
-if ($result_cases) {
-    $row_cases = mysqli_fetch_assoc($result_cases);
-    $ongoing_count = $row_cases['ongoing_count'];
-} else {
-    $ongoing_count = 0;
+$emergency_locations = [];
+if ($result_emergency) {
+    while ($row_emergency = pg_fetch_assoc($result_emergency)) {
+        $lat = explode(',', $row_emergency['lat']);
+        if (count($lat) == 2) {
+            $emergency_locations[] = [
+                'location' => $row_emergency['location'],
+                'lat' => (float)$lat[0],
+                'long' => (float)$lat[1],
+            ];
+        }
+    }
 }
 
-mysqli_close($conn);
+pg_close($conn);
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -71,11 +116,34 @@ mysqli_close($conn);
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-<hash>" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMiW0t0z5A4uY8Q5ZO1+QAc2P5p/dR9u5ViB3" crossorigin="anonymous">
+
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
 
   <style>
+    .card {
+      margin-bottom: 15px; /* Space between cards */
+    }
+
+    #map {
+      height: 360vh;
+      border-radius: 5px;
+      box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);
+    }
+
+    /* Adjust line chart and bubble chart height on mobile */
+    #lineChart, #bubbleChart {
+      height: 210px; /* Adjust height for mobile */
+    }
+
+    /* Media Queries */
+    @media (max-width: 768px) {
+      #lineChart, #barChart {
+        height: 150px; /* Reduce height for smaller screens */
+      }
+    }
     .modal1 {
       display: none;
       position: fixed;
@@ -123,6 +191,36 @@ mysqli_close($conn);
       height: 210px;
       margin-left: 13px;
     }
+    .pagetitle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .year-filter {
+      display: flex;
+      align-items: center;
+      margin-left: 20px;
+    }
+
+    .year-filter label {
+      margin-right: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #184965;
+    }
+
+    .dropdown-container {
+      display: inline-block; /* Ensures the dropdown is inline with the label */
+    }
+    #clock {
+      font-size: 20px;
+      font-weight: bold;
+      color: #184965;
+      margin: 0 15px;
+      /* Additional styles to resemble a cellphone clock */
+    }
+
+    
   </style>
 </head>
 
@@ -134,8 +232,29 @@ mysqli_close($conn);
 
     <div class="pagetitle">
       <h1>Dashboard</h1>
-      <nav></nav>
-    </div><!-- End Page Title -->
+
+      <div style="display: flex; align-items: center;"> 
+          <i class="fas fa-clock" style="font-size: 20px; color: #184965; margin-right: -5px;"></i>
+          <div id="clock" style="font-size: 20px; font-weight: bold; color: #184965; margin-right: 15px;"></div>
+
+          <i class="fas fa-calendar-alt" style="font-size: 20px; color: #184965; margin-right: 7px; margin-left:100px;"></i>
+          <div id="date" style="font-size: 20px; font-weight: bold; color: #184965;"></div>
+      </div>
+
+      <div class="year-filter">
+            <i class="fas fa-filter" style="font-size: 17px; color: #184965; margin-right: 7px;"></i>
+            <label for="year">Filter Year:</label>
+            <form method="POST" action="">
+              <select name="year" id="year" onchange="this.form.submit();">
+                <?php for ($i = 2000; $i <= date("Y"); $i++): ?>
+                  <option value="<?php echo $i; ?>" <?php if ($i == $selected_year) echo 'selected'; ?>><?php echo $i; ?></option>
+                <?php endfor; ?>
+              </select>
+            </form>
+          </div>
+        </div>
+    </div>
+
 
     <section class="section dashboard">
       <div class="container">
@@ -148,7 +267,7 @@ mysqli_close($conn);
                   <h5 class="card-title">New Reports</h5>
                   <div class="d-flex align-items-center">
                     <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-                      <i class="bi bi-person-lines-fill"></i>
+                    <i class="bi bi-file-earmark-plus" style="color: #184965;"></i>
                     </div>
                     <div class="ps-3">
                       <h6><?php echo $count; ?></h6>
@@ -168,7 +287,7 @@ mysqli_close($conn);
                   <h5 class="card-title">Ongoing Cases</h5>
                   <div class="d-flex align-items-center">
                     <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-                      <i class="bi bi-houses"></i>
+                    <i class="bi bi-hourglass-split" style="color: #184965;"></i>
                     </div>
                     <div class="ps-3">
                       <h6><?php echo $ongoing_count; ?></h6>
@@ -183,16 +302,27 @@ mysqli_close($conn);
 
           <canvas id="barChart" style="height: 50px; width:-7%; border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></canvas>
                 
-                    </div>
+          </div>
+          </div>
+   
+  </div>
+</div>
 
     <!-- Customers Card 1 -->
 
     <div class="row">
-            <div class="col-6">
-              <div id="map" style="height: 420px; width:102%; margin-top: -100px;border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></div>
+          <div class="col-xxl-6 col-md-6">
+            <div style="height: 60vh; width: 102%; background-color: white; margin-top: -100px; padding: 10px; border-radius: 5px; box-shadow: 0px 0 15px rgba(0, 0, 0, 0.1);">
+                <div style="background-color: white; padding: 10px; border-radius: 5px; text-align: center;">
+                    <h6 style="margin: 0; font-weight: bold; font: size 16px; color: #333;">Geographic Density of Emergency Cases</h6>
+                </div>
+                <div style="padding-top: 100px;"> 
+                    <div id="map" style="height: 50vh; width: 100%; margin-top: -100px; border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></div>
+                </div>
             </div>
+        </div>
 
-            <div class="col-6">
+            <div class="col-xxl-6 col-md-6">
               <canvas id="lineChart" style="height: 315px; width: 50%;border-radius: 5px; margin-top: 19px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></canvas>
             </div>
             
@@ -224,6 +354,9 @@ mysqli_close($conn);
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
 
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
@@ -325,117 +458,61 @@ mysqli_close($conn);
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const map = L.map('map').setView([51.505, -0.09], 13);
+  // Initialize the map
+  const emergencyLocations = <?php echo json_encode($emergency_locations); ?>;
+  const map = L.map('map').setView([14.06702850055952, 120.62615777059939], 16);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
 
-      const crimeData = [
-        { lat: 51.505, lng: -0.09, crimeRate: 10, location: "Location A" },
-        { lat: 51.51, lng: -0.1, crimeRate: 20, location: "Location B" },
-        { lat: 51.49, lng: -0.08, crimeRate: 30, location: "Location C" },
-        { lat: 51.48, lng: -0.1, crimeRate: 40, location: "Location D" },
-        { lat: 51.49, lng: -0.1, crimeRate: 50, location: "Location E" },
-        { lat: 51.52, lng: -0.09, crimeRate: 60, location: "Location F" },
-        { lat: 51.50, lng: -0.11, crimeRate: 70, location: "Location G" },
-        { lat: 51.48, lng: -0.07, crimeRate: 80, location: "Location H" },
-        { lat: 51.47, lng: -0.12, crimeRate: 90, location: "Location I" },
-        { lat: 51.53, lng: -0.10, crimeRate: 100, location: "Location J" },
-        { lat: 51.54, lng: -0.08, crimeRate: 110, location: "Location K" },
-        { lat: 51.55, lng: -0.07, crimeRate: 120, location: "Location L" },
-        { lat: 51.56, lng: -0.09, crimeRate: 130, location: "Location M" },
-        { lat: 51.57, lng: -0.1, crimeRate: 140, location: "Location N" },
-        { lat: 51.58, lng: -0.11, crimeRate: 150, location: "Location O" },
-        { lat: 51.59, lng: -0.12, crimeRate: 160, location: "Location P" },
-        { lat: 51.60, lng: -0.13, crimeRate: 170, location: "Location Q" },
-        { lat: 51.61, lng: -0.14, crimeRate: 180, location: "Location R" },
-        { lat: 51.62, lng: -0.15, crimeRate: 190, location: "Location S" },
-        { lat: 51.63, lng: -0.16, crimeRate: 200, location: "Location T" },
-        { lat: 51.64, lng: -0.17, crimeRate: 210, location: "Location U" },
-        { lat: 51.65, lng: -0.18, crimeRate: 220, location: "Location V" },
-        { lat: 51.66, lng: -0.19, crimeRate: 230, location: "Location W" },
-        { lat: 51.67, lng: -0.20, crimeRate: 240, location: "Location X" },
-        { lat: 51.68, lng: -0.21, crimeRate: 250, location: "Location Y" },
-        { lat: 51.69, lng: -0.22, crimeRate: 260, location: "Location Z" },
-        { lat: 51.70, lng: -0.23, crimeRate: 270, location: "Location AA" },
-        { lat: 51.71, lng: -0.24, crimeRate: 280, location: "Location BB" },
-        { lat: 51.72, lng: -0.25, crimeRate: 290, location: "Location CC" },
-        { lat: 51.73, lng: -0.26, crimeRate: 300, location: "Location DD" },
-        { lat: 51.74, lng: -0.27, crimeRate: 310, location: "Location EE" },
-        { lat: 51.75, lng: -0.28, crimeRate: 320, location: "Location FF" },
-        { lat: 51.76, lng: -0.29, crimeRate: 330, location: "Location GG" },
-        { lat: 51.77, lng: -0.30, crimeRate: 340, location: "Location HH" },
-        { lat: 51.78, lng: -0.31, crimeRate: 350, location: "Location II" },
-        { lat: 51.79, lng: -0.32, crimeRate: 360, location: "Location JJ" },
-        { lat: 51.80, lng: -0.33, crimeRate: 370, location: "Location KK" },
-        { lat: 51.81, lng: -0.34, crimeRate: 380, location: "Location LL" },
-        { lat: 51.82, lng: -0.35, crimeRate: 390, location: "Location MM" },
-        { lat: 51.83, lng: -0.36, crimeRate: 400, location: "Location NN" },
-        { lat: 51.84, lng: -0.37, crimeRate: 410, location: "Location OO" },
-        { lat: 51.85, lng: -0.38, crimeRate: 420, location: "Location PP" },
-        { lat: 51.86, lng: -0.39, crimeRate: 430, location: "Location QQ" },
-        { lat: 51.87, lng: -0.40, crimeRate: 440, location: "Location RR" },
-        { lat: 51.88, lng: -0.41, crimeRate: 450, location: "Location SS" },
-        { lat: 51.89, lng: -0.42, crimeRate: 460, location: "Location TT" },
-        { lat: 51.90, lng: -0.43, crimeRate: 470, location: "Location UU" },
-        { lat: 51.91, lng: -0.44, crimeRate: 480, location: "Location VV" },
-        { lat: 51.92, lng: -0.45, crimeRate: 490, location: "Location WW" },
-        { lat: 51.93, lng: -0.46, crimeRate: 500, location: "Location XX" }
-      ];
+    const heatmapData = emergencyLocations.map(location => [location.lat, location.long]);
+    const heat = L.heatLayer(heatmapData, { radius: 25, blur: 15 }).addTo(map);
+    
 
-      const maxCrimeRate = Math.max(...crimeData.map(d => d.crimeRate));
-      const scaleFactor = 50 / maxCrimeRate;
-
-      crimeData.forEach(data => {
-        const circle = L.circle([data.lat, data.lng], {
-          color: 'red',
-          fillColor: '#f03',
-          fillOpacity: 0.5,
-          radius: data.crimeRate * scaleFactor * 50
-        }).addTo(map);
-
-        circle.bindPopup(`Location: ${data.location}<br>Crime Rate: ${data.crimeRate}`);
-      });
-
-      const lineChartData = {
-        labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+    const lineChartCtx = document.getElementById('lineChart').getContext('2d');
+    const lineChart = new Chart(lineChartCtx, {
+      type: 'line',
+      data: {
+        labels: <?php echo json_encode($monthly_labels); ?>,
         datasets: [{
-          label: 'Number of Reports',
-          data: [65, 59, 80, 81, 56, 55, 40],
+          label: 'Total Crimes',
+          data: <?php echo json_encode($monthly_data); ?>,
+          backgroundColor: 'rgba(75, 192, 192, 0.2)', // Adjust to match your color
           borderColor: '#184965',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderWidth: 3,
           fill: true,
-          tension: 0.1
+          tension: 0.1, // Smooth the line
+          pointRadius: 5, // Adjust point size for better visibility
+          pointHoverRadius: 7,
         }]
-      };
-
-      new Chart(document.getElementById('lineChart').getContext('2d'), {
-        type: 'line',
-        data: lineChartData,
-        options: {
-          responsive: true,
-          plugins: {
-            title: {
-              display: true,
-              text: 'Monthly Number of Reports',
-              font: {
-                size: 16
-              },
-              color: '#333'
-            }
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
           },
-          scales: {
-            x: {
-              beginAtZero: true
-            },
-            y: {
-              beginAtZero: true
-            }
+          title: {
+            display: true,
+            text: 'Monthly Crime Statistics for Year <?php echo $selected_year; ?>',
+            font: {
+                    size: 16 // Font size for the title
+                },
+                color: '#333'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true
           }
         }
-      });
+      }
     });
+
+});
 
     const locations = ['Robbery', 'Assault', 'Burglary', 'Vandalism', 'Theft'];
     const categories = ['Banilad', 'Bucana', 'Aga', 'Barangay 1', 'Barangay 2'];
@@ -475,42 +552,75 @@ const borderColors = [
       borderWidth: 1
     }));
 
-    // Initialize the horizontal bar chart with updated colors
-    new Chart(document.getElementById('barChart').getContext('2d'), {
+    // Bar Chart Data
+    const barChartCtx = document.getElementById('barChart').getContext('2d');
+    const barChart = new Chart(barChartCtx, {
       type: 'bar',
       data: {
-        labels: categories,
-        datasets: datasets
+        labels: <?php echo json_encode($category_labels); ?>,
+        datasets: [{
+          label: 'Crimes by Category',
+          data: <?php echo json_encode($category_counts); ?>,
+          backgroundColor: '#184965', // Bar color
+          borderColor: '#184965', // Bar border color
+          borderWidth: 1
+        }]
       },
       options: {
-        indexAxis: 'y', // This makes the bars horizontal
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'top'
-          },
-          title: {
-            display: true,
-            text: 'Total Reported Crimes by Category and Location',
-            font: {
-                size: 16
-              },
-              color: '#333'
+      scales: {
+        y: {
+          beginAtZero: true // Start y-axis at 0
+        }
+      },
+      scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Crime Reports for Year <?php echo $selected_year; ?>'
           }
         },
-        scales: {
-          x: {
-            stacked: true,
-            beginAtZero: true
-          },
+        
           y: {
-            stacked: true
+            beginAtZero: true
           }
+      },
+      plugins: {
+            title: {
+                display: true,
+                text: 'Crime Reports by Category', // Title for the bar chart
+                font: {
+                    size: 16 // Font size for the title
+                },
+                color: '#333'
+            }
         }
-      }
-    });
+    }
+});
 
   </script>
+
+<script>
+  // Function to update time and date
+function updateClock() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = now.toLocaleDateString(undefined, options);
+    
+    // Get current time
+    const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Update the clock and date elements
+    document.getElementById('clock').textContent = currentTime;
+    document.getElementById('date').textContent = formattedDate;
+}
+
+// Update clock and date every second
+setInterval(updateClock, 1000);
+
+// Initial call to display immediately on load
+updateClock();
+
+</script>
 
 
 

@@ -1,15 +1,16 @@
+
 <?php 
  session_start();
    include "dbcon.php";
   if (!isset($_SESSION['role']) ||(trim ($_SESSION['role']) == '')) {
         header('location:main.php');
         exit();
-    }  
-
-    $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
+    } 
+  if (isset($_GET['category'])) {
+      $_SESSION['category'] = $_GET['category'];  // Set the session status based on folder click
+  }
     
-?>
-
+    ?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -39,19 +40,10 @@
   <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
   <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-<hash>" crossorigin="anonymous" />
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
 
-  <!-- =======================================================
-  * Template Name: NiceAdmin
-  * Updated: Nov 17 2023 with Bootstrap v5.3.2
-  * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
   <style type="text/css">
     .error-message {
             height: 10px; /* Fixed height for the error message container */
@@ -59,66 +51,6 @@
             margin-top: 10px;
 
         }
-    .modal1 {
-      display: none; /* Hidden by default */
-      position: fixed; /* Stay in place */
-      z-index: 1000; /* Sit on top */
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto; /* Enable scrolling if needed */
-      background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-    }
-    .modal-content1 {
-      background-color: #fefefe;
-      margin: 15% auto;
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%;
-      max-width: 600px;
-      text-align: center;
-      border-radius: 8px;
-    }
-    .close1 {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .close1:hover,
-    .close1:focus {
-      color: black;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .modal-content h2 i {
-      margin-right: 18px;
-      color: #f0ad4e; /* Icon color (yellow) */
-    }
-    #fileList {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .file-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 5px 0;
-    }
-
-    .remove-btn {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        margin-left: 1rem;
-    }
-
-    .remove-btn:hover {
-        background-color: #c82333;
-        color: white;
-    }
   </style>
 </head>
 
@@ -130,10 +62,9 @@
   
 
   <main id="main" class="main">
-  <audio id="alertSound" src="alert.mp3" preload="auto"></audio>
 
     <div class="pagetitle">
-      <h1>Document Management</h1>
+      <h1>Files</h1>
 
       <nav>
        
@@ -163,92 +94,38 @@
                     </div>
                 </div>
                 <div class="card-body mt-3">
-
-                  <!-- <h5 class="card-title">Landlord List</h5> -->
+                  <form action="documents1.php" method="post">
+                  <div class="input-group mb-5">
+                  <input type="text" class="form-control" placeholder="User name" required  name="username" aria-label="Recipient's username" aria-describedby="button-addon2">
+                  <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Search</button>
+                  <a class="btn btn-outline-secondary" type="button" id="button-addon2" href="documents.php">Reset</a>
+                </div>
+                </form>
                   
+                  <div class="container text-center ">
+                  <div class="row row-cols-2 row-cols-sm-2 row-cols-md-6">
+                  <?php
+                  $id = $_SESSION['id'];
+                  // Retrieve distinct categories from the reports table
+                  $sql_categories = "SELECT DISTINCT category FROM reports WHERE police_assign = $1";
+                  // Prepare and execute the SQL query with PostgreSQL
+                  $result_categories = pg_prepare($conn, "get_categories", $sql_categories);
+                  $result_categories = pg_execute($conn, "get_categories", array($id));
 
-                  <table class="table table-borderless datatable mt-2" id="data-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">User Reported</th>
-                        <th scope="col">Case No.</th>
-                        <th scope="col">Victim Name</th>
-                        <th scope="col">Details</th>
-                        <th scope="col">Evidence file</th>
-                        <th scope="col">File Date</th>
-                        <th scope="col">Action</th>
-
-                      
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <?php
-
-                       
-                      $sql = "SELECT r.id, u.fullname AS username, r.name,
-    r.category,
-    r.description,
-    r.evidence,
-    DATE_FORMAT(r.file_date, '%b-%d-%Y') AS file_date,
-    r.finish,
-    r.police_assign,
-    r.user_id
-FROM 
-    reports AS r
-INNER JOIN 
-    residents AS u 
-ON 
-    r.user_id = u.id
-WHERE
-    r.police_assign = $policeAssign";
-                      $result = mysqli_query($conn, $sql);
-                      while ($row = mysqli_fetch_array($result)) {
-                        echo "<tr>";
-                        echo "<td>".$row['username']."</td>";
-                        echo "<td>".$row['id']."</td>";
-                        echo "<td>".$row['name']."</td>";
-                        echo "<td>".$row['description']."</td>";
-                        echo "<td>".$row['evidence']."</td>";
-                        echo "<td>".$row['file_date']."</td>";
-
-                        echo "<td>
-                        <button class='btn btn-sm btn-primary' onclick='viewFiles(\"".$row['id']."\", \"".$row['user_id']."\", \"".$row['name']."\", \"".$row['category']."\", \"".$row['description']."\", \"".$row['file_date']."\")'>Manage File</button> 
-                        </td>";
-
-
-
-
-                   
-
-                        
-                     
-                      
-
-              
-                      
-
-
-
-                        
-                       
-
-                        // para sa edit
-                       
-                        // para sa delete
-                       
-                     
-                      
-                      
-
-
-                        echo "</tr>";
-
-                      }
-                      ?>
-                    
-                      
-                    </tbody>
-                  </table>
+                  // Check for query results and output the categories
+                  while ($row_category = pg_fetch_assoc($result_categories)) {
+                    $category = $row_category['category'];
+                    echo "<div class='col'>";
+                    echo "<a href='manage_documents.php?category=" . urlencode($category) . "'>";
+                    echo "<img src='folder.png' width='50px' class='mb-2'>";
+                    echo "<div>" . htmlspecialchars($category) . "</div>";
+                    echo "</a>";
+                    echo "</div>";
+                  }
+                ?>
+                  </div>
+                </div>
+                  
 
                 </div>
 
@@ -256,13 +133,6 @@ WHERE
             </div><!-- End Recent Sales -->
 
     </section>
-    <div id="emergencyAlertModal" class="modal1">
-      <div class="modal-content1">
-        <span class="close1">&times;</span>
-        <h2 style="color:red; font-weight:bolder;"><i class="fa fa-exclamation-triangle"></i>Emergency Alert!</h2>
-        <p id="emergencyLocation"></p>
-      </div>
-    </div>
 
   </main>
 
@@ -284,255 +154,9 @@ WHERE
 
 </body>
 
-<div class='modal fade' id="asign" tabindex='-1' aria-labelledby='exampleModalLabel' aria-hidden='true'>
-    <div class='modal-dialog'>
-        <div class='modal-content'>
-            <div class='modal-header bg-primary text-white'>
-                <h1 class='modal-title fs-5' id='exampleModalLabel'>Upload Files and Notes</h1>
-                <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
-            </div>
-            <div class='modal-body'>
-                <form action='uploadFiles.php' method='post' enctype='multipart/form-data'>
-                    <input type='hidden' id="arrid1" name='id'>
-                    <input type='hidden' id="userId" name='user_id'>
-                    <input type='hidden' id="name" name='name'>
-                    <input type='hidden' id="category" name='category'>
-                    <input type='hidden' id="description" name='description'>
-                    <input type='hidden' id="file_date" name='file_date'>
-                    <input type='hidden' id="policeId" name='policeId' value="<?php echo $policeAssign; ?>">
 
-                    <div class="mb-3">
-                        <label for="files" class="form-label">Upload Files</label>
-                        <input type="file" class="form-control" id="files" name="files[]" multiple onchange="handleFileSelect(event)">
-                    </div>
 
-                    <div id="fileList" class="mb-3"></div>
 
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
-                    </div>
+</html>
 
-                    <div class="modal-footer">
-                        <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
-                        <button type='submit' class='btn btn-primary'>Update</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-<div class='modal fade' id='viewFilesModal' tabindex='-1' aria-labelledby='viewFilesModalLabel' aria-hidden='true'>
-    <div class='modal-dialog modal-lg'>
-        <div class='modal-content'>
-            <div class='modal-header bg-primary text-white'>
-                <h1 class='modal-title fs-5' id='viewFilesModalLabel'>View Evidence Files</h1>
-                <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
-            </div>
-            <div class='modal-body'>
-                <div id='filesContainer'>
-                    <!-- Files will be injected here -->
-                </div>
-            </div>
-            <div class='modal-footer'>
-                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<script>
-    let fileArray = [];
-
-    function handleFileSelect(event) {
-        const fileList = document.getElementById('fileList');
-        const files = event.target.files;
-
-        // Update the fileArray with new files
-        for (let i = 0; i < files.length; i++) {
-            if (!fileArray.some(file => file.name === files[i].name)) {
-                fileArray.push(files[i]);
-            }
-        }
-
-        // Display the files
-        fileList.innerHTML = ''; // Clear existing files
-        fileArray.forEach((file, index) => {
-            const fileDiv = document.createElement('div');
-            fileDiv.className = 'file-item';
-
-            const fileName = document.createElement('span');
-            fileName.textContent = file.name;
-
-            const removeButton = document.createElement('button');
-            removeButton.textContent = 'Remove';
-            removeButton.type = 'button';
-            removeButton.className = 'btn btn-danger btn-sm ms-2';
-            removeButton.onclick = function () {
-                removeFile(index);
-            };
-
-            fileDiv.appendChild(fileName);
-            fileDiv.appendChild(removeButton);
-
-            fileList.appendChild(fileDiv);
-        });
-    }
-
-    function removeFile(index) {
-        // Remove file from fileArray
-        fileArray.splice(index, 1);
-
-        // Update the file input
-        const inputFile = document.getElementById('files');
-        const dt = new DataTransfer();
-        fileArray.forEach(file => dt.items.add(file));
-        inputFile.files = dt.files;
-
-        // Update displayed file list
-        handleFileSelect({ target: inputFile });
-    }
-</script>
-
-<script type="text/javascript">
-  
-  
-  function callmodal1(id, user_id, name, category, description, file_date) {
-    // Set hidden input values
-    document.getElementById("arrid1").value = id;
-    document.getElementById('userId').value = user_id;
-    document.getElementById('name').value = name;
-    document.getElementById('category').value = category;
-    document.getElementById('description').value = description;
-    document.getElementById('file_date').value = file_date;
-    
-    // Show the file management modal
-    var fileModal = new bootstrap.Modal(document.getElementById('asign'));
-    fileModal.show();
-}
-
-function viewFiles(id) {
-    // Fetch files from the server based on the report id
-    fetch(`fetchFiles.php?id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            const filesContainer = document.getElementById('filesContainer');
-            filesContainer.innerHTML = '';
-
-            data.files.forEach(file => {
-                const fileDiv = document.createElement('div');
-                fileDiv.className = 'file-item';
-
-                const fileName = document.createElement('span');
-                fileName.textContent = file.name;
-
-                const fileLink = document.createElement('a');
-                fileLink.href = file.url;
-                fileLink.target = '_blank';
-                fileLink.textContent = 'View';
-                fileLink.className = 'btn btn-info btn-sm ms-2';
-
-                fileDiv.appendChild(fileName);
-                fileDiv.appendChild(fileLink);
-
-                filesContainer.appendChild(fileDiv);
-            });
-
-            var viewModal = new bootstrap.Modal(document.getElementById('viewFilesModal'));
-            viewModal.show();
-        })
-        .catch(error => console.error('Error fetching files:', error));
-}
-
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', (event) => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  });
-
-  function showEmergencyAlert(location) {
-    // Show the modal
-    const modal = document.getElementById('emergencyAlertModal');
-    const modalLocation = document.getElementById('emergencyLocation');
-    modalLocation.textContent = `Emergency Alert: ${location}`;
-    modal.style.display = 'block';
-
-    // Function to play alert sound with volume set to 70%
-    function playAlertSound() {
-      alertSound.volume = 0.1; // Set volume to 70% (0.7 is 70% of max volume)
-      alertSound.play();
-    }
-
-    // Play alert sound when showing the modal
-    playAlertSound();
-
-    // Text-to-speech function
-    function speakText(text) {
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1; // Set speech rate
-        utterance.pitch = 1; // Set pitch
-        utterance.volume = 5; // Set volume
-        window.speechSynthesis.speak(utterance);
-      } else {
-        console.error('Speech Synthesis not supported in this browser.');
-      }
-    }
-
-    // Speak the alert message
-    speakText(`Emergency Alert: ${location}`);
-
-    // Close the modal when the user clicks on the close button (×)
-    const closeButton = document.getElementsByClassName('close1')[0];
-    closeButton.onclick = function() {
-      modal.style.display = 'none';
-    };
-
-    // Close the modal if the user clicks anywhere outside of the modal content
-    window.onclick = function(event) {
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    };
-
-    // Show browser notification
-    if (Notification.permission === "granted") {
-      const notification = new Notification('Emergency Alert!', {
-        body: `Emergency Alert: ${location}`,
-        icon: './img/logo.png' // Path to an icon image
-      });
-
-      notification.onclick = function() {
-        window.focus();
-        modal.style.display = 'block'; // Ensure modal is visible if clicked
-      };
-    }
-  }
-
-  // WebSocket setup
-  const ws = new WebSocket('ws://localhost:8080');
-  const alertSound = document.getElementById('alertSound');
-
-  ws.onopen = () => {
-    console.log('WebSocket connection established');
-  };
-
-  ws.onmessage = (message) => {
-    const data = JSON.parse(message.data);
-
-    if (data.type === 'emergencyAlert') {
-      showEmergencyAlert(data.data.combinedLocation);
-    }
-  };
-
-  ws.onclose = () => {
-    console.log('WebSocket connection closed');
-  };
-
-  ws.onerror = (error) => {
-    console.error('WebSocket error: ', error);
-  };
-  </script>
-  </html>
