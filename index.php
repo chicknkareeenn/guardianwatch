@@ -98,9 +98,6 @@
                             <div class="col-12 mb-3">
                                 <button class="btn btn-primary w-100" type="submit" style="background-color:#184965;">Login</button>
                             </div>
-                            <div class="col-12 mb-3">
-                                <p class="small mb-0" style="color:#040F0F;">Don't have an account? <a href="signup.php">Create an account</a></p>
-                            </div>
                         </form>
                     </div>
                 </div>
