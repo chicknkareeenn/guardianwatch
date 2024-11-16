@@ -22,7 +22,10 @@ $role = "Police";
 $verification_token = bin2hex(random_bytes(16)); // Generate a secure token
 
 // Get upload path from environment variable or fallback to default path
-$upload_dir = getenv('UPLOAD_PATH') ? getenv('UPLOAD_PATH') : '/upload';
+$upload_dir = getenv('UPLOAD_PATH') ?: __DIR__ . '/uploads'; // Fallback to /uploads if not set in environment
+if (!is_dir($upload_dir)) {
+    mkdir($upload_dir, 0777, true);  // Make sure the directory is writable
+}
 
 $img_name = $_FILES['image']['name'];
 $img_size = $_FILES['image']['size'];
@@ -30,15 +33,17 @@ $tmp_name = $_FILES['image']['tmp_name'];
 $error = $_FILES['image']['error'];
 
 if ($error === 0) {
-    if ($img_size > 10000000000) {
+    // File size limit (5MB in this case)
+    if ($img_size > 5000000) {
         echo "Sorry, your file is too large.";
     } else {
         $img_ex = pathinfo($img_name, PATHINFO_EXTENSION);
         $img_ex_lc = strtolower($img_ex);
         $allowed_exs = array("png", "jpg");
 
+        // Check if the file has an allowed extension
         if (in_array($img_ex_lc, $allowed_exs)) {
-            $new_img_name = $img_name;
+            $new_img_name = time() . '_' . $img_name; // Make the image name unique
             $img_upload_path = $upload_dir . '/' . $new_img_name; // Use dynamic upload path
             move_uploaded_file($tmp_name, $img_upload_path);
 
@@ -58,14 +63,14 @@ if ($error === 0) {
                 // Send confirmation email
                 $mail = new PHPMailer(true);
                 try {
-                    //Server settings
+                    // Server settings
                     $mail->isSMTP();
                     $mail->Host       = 'smtp.gmail.com';
                     $mail->SMTPAuth   = true;
                     $mail->Username   = 'st.peter.lifeplansinsurance@gmail.com';
-                    $mail->Password   = 'scuh buyj yujs hdeo';                  // SMTP password
-                    $mail->SMTPSecure = 'ssl';                                  // Enable TLS encryption; `PHPMailer::ENCRYPTION_SMTPS` encouraged
-                    $mail->Port       = 465; 
+                    $mail->Password   = 'scuh buyj yujs hdeo'; // SMTP password
+                    $mail->SMTPSecure = 'ssl';  // Enable SSL encryption
+                    $mail->Port       = 465;
 
                     // Recipients
                     $mail->setFrom('st.peter.lifeplansinsurance@gmail.com');
