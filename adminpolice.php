@@ -118,7 +118,7 @@
                 while ($row = pg_fetch_assoc($result)) {
                   echo "<tr>";
                   echo "<td>".$row['fullname']."</td>";
-                  echo "<td><img src='upload/".$row['image']."' width='50px' style='border-radius:50%;' data-bs-toggle='modal' data-bs-target='#pic".$row['id']."'></td>";
+                  echo "<td><img src='https://raw.githubusercontent.com/chicknkareeenn/guardianwatch/master/upload/".$row['image']."' width='50px' style='border-radius:50%;' data-bs-toggle='modal' data-bs-target='#pic".$row['id']."'></td>";
                   echo "<td>".$row['username']."</td>";
                   echo "<td>".$row['contact']."</td>";
                   echo "<td>".$row['ran']."</td>";
