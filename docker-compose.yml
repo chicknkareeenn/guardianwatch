@@ -5,9 +5,6 @@ services:
     ports:
       - "80:80"
     volumes:
-      - upload_data:/app/upload
+      - ./upload:/upload  # Map the local upload directory to the container's /upload directory
     environment:
-      - PHP_UPLOAD_DIR=/app/upload
-
-volumes:
-  upload_data:
+      - UPLOAD_PATH=/upload
