@@ -58,7 +58,7 @@ $result_notifications = pg_query($conn, $sql_notifications);
 
             <li class="nav-item dropdown pe-3">
                 <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown" style = "color: #ffffff">
-                    <img src="/upload/<?php
+                    <img src="upload/<?php
                         $id = $_SESSION['id'];
                         $role = $_SESSION['role'];
                         $sql = $role == 'admin' ? "SELECT image, fullname FROM admin WHERE id = '$id'" : "SELECT image, fullname FROM police WHERE id = '$id'";
