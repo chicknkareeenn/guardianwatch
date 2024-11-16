@@ -22,7 +22,7 @@ $role = "Police";
 $verification_token = bin2hex(random_bytes(16)); // Generate a secure token
 
 // Get upload path from environment variable or fallback to default path
-$upload_dir = getenv('UPLOAD_PATH') ? getenv('UPLOAD_PATH') : 'upload';
+$upload_dir = getenv('UPLOAD_PATH') ? getenv('UPLOAD_PATH') : '/upload';
 
 $img_name = $_FILES['image']['name'];
 $img_size = $_FILES['image']['size'];
