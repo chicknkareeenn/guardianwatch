@@ -34,19 +34,11 @@
   <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
   <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-<hash>" crossorigin="anonymous" />
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
 
-  <!-- =======================================================
-  * Template Name: NiceAdmin
-  * Updated: Nov 17 2023 with Bootstrap v5.3.2
-  * Template URL: https://bootstrapmade.com/nice-admin-bootstrap-admin-html-template/
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
+ 
   <style type="text/css">
     .error-message {
             height: 10px; /* Fixed height for the error message container */
@@ -54,44 +46,6 @@
             margin-top: 10px;
 
         }
-    .modal1 {
-      display: none; /* Hidden by default */
-      position: fixed; /* Stay in place */
-      z-index: 1000; /* Sit on top */
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto; /* Enable scrolling if needed */
-      background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-    }
-    .modal-content1 {
-      background-color: #fefefe;
-      margin: 15% auto;
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%;
-      max-width: 600px;
-      text-align: center;
-      border-radius: 8px;
-    }
-    .close1 {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .close1:hover,
-    .close1:focus {
-      color: black;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .modal-content h2 i {
-      margin-right: 18px;
-      color: #f0ad4e; /* Icon color (yellow) */
-    }
   </style>
 </head>
 
@@ -103,11 +57,16 @@
   
 
   <main id="main" class="main">
-  <audio id="alertSound" src="alert.mp3" preload="auto"></audio>
 
     <div class="pagetitle">
-      <h1>Police List</h1>
-
+    <h1>
+    Police List 
+    <div class="float-end">
+        <button class="btn btn-sm" style="background-color: #184965; color: white;" data-bs-toggle="modal" data-bs-target="#exampleModal">
+            <i class="bi bi-plus-lg"></i> Create New Police Account
+        </button>
+    </div>
+</h1>
       <nav>
        
       </nav>
@@ -178,33 +137,78 @@
             </div><!-- End Recent Sales -->
 
     </section>
-    <div id="emergencyAlertModal" class="modal1">
-      <div class="modal-content1">
-        <span class="close1">&times;</span>
-        <h2 style="color:red; font-weight:bolder;"><i class="fa fa-exclamation-triangle"></i>Emergency Alert!</h2>
-        <p id="emergencyLocation"></p>
-      </div>
-    </div>
 
   </main>
-<div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+
+
+
+
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header" id="modalheader">
-        <h5 class="modal-title" id="idtitle">Details</h5>
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Add New Police Account</h1>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p style="font-size: 20px;" id="modalDate"></p>
+        <form action="addnewpolice.php" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="fullname" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="fullname" name="fullname" required>
+          </div>
+        <div class="mb-3">
+            <label for="username" class="form-label">Email Address</label>
+            <input type="text" class="form-control" id="username" name="email" required>
+          </div>
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          <div class="mb-3">
+            <label for="ran" class="form-label">Rank</label>
+            <input type="text" class="form-control" id="ran" name="ran" required>
+          </div>
+          <div class="mb-3">
+            <label for="image" class="form-label">Profile Image</label>
+            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+          </div>
+          <div class="mb-3">
+            <label for="contact" class="form-label">Contact No.</label>
+            <input type="text" class="form-control" id="contact" name="contact" required>
+          </div>
+         
+          <div class="mb-3">
+            <label for="contact" class="form-label">Assigned Category</label>
+            <select class="form-select" aria-label="Default select example" name="category">
+                          <option selected>Open this select menu</option>
+                          <?php
+    // PostgreSQL connection
+                              // PostgreSQL query
+                              $sql = "SELECT * FROM categories";
+                              $result = pg_query($conn, $sql);
 
-        <p style="text-align: center;font-size: 20px;">Are you sure you want to <span id="modalAction"></span> Mr/Ms. <span id="modalName"></span> ? </p>
+                              if (!$result) {
+                                  echo "An error occurred while executing the query.";
+                                  exit;
+                              }
 
-        <center><button id="btnbtn1" class="btn btn-primary" style="display: none;">Accept</button></center>
+                              // Fetch and display the options
+                              while ($row = pg_fetch_assoc($result)) {
+                                  echo "<option value='" . $row['id'] . "'>" . $row['category'] . "</option>";
+                              }
+                          ?>
 
-        <center><button id="btnbtn2" class="btn btn-danger" style="display: none;">Decline</button></center>
-
-        <input type="hidden"  value="" id="idd">
-
+                        </select>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn " style="background-color:#184965;color: white;">Add New</button>
+        </form>
       </div>
     </div>
   </div>
@@ -224,97 +228,6 @@
 
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
-
-  <script>
-  document.addEventListener('DOMContentLoaded', (event) => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  });
-
-  function showEmergencyAlert(location) {
-    // Show the modal
-    const modal = document.getElementById('emergencyAlertModal');
-    const modalLocation = document.getElementById('emergencyLocation');
-    modalLocation.textContent = `Emergency Alert: ${location}`;
-    modal.style.display = 'block';
-
-    // Function to play alert sound with volume set to 70%
-    function playAlertSound() {
-      alertSound.volume = 0.1; // Set volume to 70% (0.7 is 70% of max volume)
-      alertSound.play();
-    }
-
-    // Play alert sound when showing the modal
-    playAlertSound();
-
-    // Text-to-speech function
-    function speakText(text) {
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1; // Set speech rate
-        utterance.pitch = 1; // Set pitch
-        utterance.volume = 5; // Set volume
-        window.speechSynthesis.speak(utterance);
-      } else {
-        console.error('Speech Synthesis not supported in this browser.');
-      }
-    }
-
-    // Speak the alert message
-    speakText(`Emergency Alert: ${location}`);
-
-    // Close the modal when the user clicks on the close button (×)
-    const closeButton = document.getElementsByClassName('close1')[0];
-    closeButton.onclick = function() {
-      modal.style.display = 'none';
-    };
-
-    // Close the modal if the user clicks anywhere outside of the modal content
-    window.onclick = function(event) {
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    };
-
-    // Show browser notification
-    if (Notification.permission === "granted") {
-      const notification = new Notification('Emergency Alert!', {
-        body: `Emergency Alert: ${location}`,
-        icon: './img/logo.png' // Path to an icon image
-      });
-
-      notification.onclick = function() {
-        window.focus();
-        modal.style.display = 'block'; // Ensure modal is visible if clicked
-      };
-    }
-  }
-
-  // WebSocket setup
-  const ws = new WebSocket('ws://localhost:8080');
-  const alertSound = document.getElementById('alertSound');
-
-  ws.onopen = () => {
-    console.log('WebSocket connection established');
-  };
-
-  ws.onmessage = (message) => {
-    const data = JSON.parse(message.data);
-
-    if (data.type === 'emergencyAlert') {
-      showEmergencyAlert(data.data.combinedLocation);
-    }
-  };
-
-  ws.onclose = () => {
-    console.log('WebSocket connection closed');
-  };
-
-  ws.onerror = (error) => {
-    console.error('WebSocket error: ', error);
-  };
-  </script>
 
 </body>
 
