@@ -38,7 +38,7 @@ if ($error === 0) {
         $allowed_exs = array("png", "jpg");
 
         if (in_array($img_ex_lc, $allowed_exs)) {
-            $new_img_name = uniqid("IMG-", true) . '.' . $img_ex_lc;
+            $new_img_name = $img_name;
             $img_upload_path = $upload_dir . '/' . $new_img_name; // Use dynamic upload path
             move_uploaded_file($tmp_name, $img_upload_path);
 
