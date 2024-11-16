@@ -58,7 +58,7 @@ if ($error === 0) {
 
             // Prepare the headers
             $headers = [
-                "Authorization: token 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",
+                "Authorization: token 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",
                 "Content-Type: application/json",
                 "User-Agent: GuardianWatchApp"
             ];
