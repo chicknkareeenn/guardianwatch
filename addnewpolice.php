@@ -80,13 +80,11 @@ if ($error === 0) {
                                      . 'Best Regards,<br>Guardian Watch';
 
                     $mail->send();
-                    echo 'A confirmation email has been sent.';
 
                     // Redirect or show success message
                     $error_message = "You successfully created a new Police account. Please check your email to verify your address.";
                     $color = "p";
                     header("Location: adminpolice.php?error_message=" . $error_message . "&color=" . $color);
-                    exit();
                 } catch (Exception $e) {
                     echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
                 }
