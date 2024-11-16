@@ -56,9 +56,16 @@ if ($error === 0) {
                 "branch" => $branch
             ]);
 
+            $githubToken = getenv('GITHUB_TOKEN');  // Access your GitHub token securely
+
+            // Check if the token was retrieved successfully
+            if ($githubToken === false) {
+                die("Error: GitHub token is not set in the environment variables.");
+            }
+
             // Prepare the headers
             $headers = [
-                "Authorization: token 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",
+                "Authorization: token $githubToken",
                 "Content-Type: application/json",
                 "User-Agent: GuardianWatchApp"
             ];
