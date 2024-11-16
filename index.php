@@ -98,6 +98,8 @@
                             <div class="col-12 mb-3">
                                 <button class="btn btn-primary w-100" type="submit" style="background-color:#184965;">Login</button>
                             </div>
+                          <div class="col-12 mb-3">
+                            </div>
                         </form>
                     </div>
                 </div>
