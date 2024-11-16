@@ -21,6 +21,9 @@ $role = "Police";
 // Generate a unique token for email verification
 $verification_token = bin2hex(random_bytes(16)); // Generate a secure token
 
+// Get upload path from environment variable or fallback to default path
+$upload_dir = getenv('UPLOAD_PATH') ? getenv('UPLOAD_PATH') : 'upload';
+
 $img_name = $_FILES['image']['name'];
 $img_size = $_FILES['image']['size'];
 $tmp_name = $_FILES['image']['tmp_name'];
@@ -36,7 +39,7 @@ if ($error === 0) {
 
         if (in_array($img_ex_lc, $allowed_exs)) {
             $new_img_name = uniqid("IMG-", true) . '.' . $img_ex_lc;
-            $img_upload_path = 'upload/' . $new_img_name;
+            $img_upload_path = $upload_dir . '/' . $new_img_name; // Use dynamic upload path
             move_uploaded_file($tmp_name, $img_upload_path);
 
             // PostgreSQL query using prepared statements to insert data
