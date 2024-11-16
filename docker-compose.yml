@@ -1,0 +1,13 @@
+version: "3"
+services:
+  web:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - upload_data:/app/upload
+    environment:
+      - PHP_UPLOAD_DIR=/app/upload
+
+volumes:
+  upload_data:
