@@ -76,7 +76,7 @@ if ($error === 0) {
                     $mail->Subject = 'Email Verification';
                     $mail->Body    = 'Hello ' . $fullname . ',<br><br>'
                                      . 'Please confirm your email address by clicking the link below:<br><br>'
-                                     . '<a href="http://localhost/new/confirm_email.php?token=' . $verification_token . '">Confirm Email</a><br><br>'
+                                     . '<a href="https://guardianwatch.onrender.com/confirm_email.php?token=' . $verification_token . '">Confirm Email</a><br><br>'
                                      . 'Best Regards,<br>Guardian Watch';
 
                     $mail->send();
@@ -86,6 +86,7 @@ if ($error === 0) {
                     $error_message = "You successfully created a new Police account. Please check your email to verify your address.";
                     $color = "p";
                     header("Location: adminpolice.php?error_message=" . $error_message . "&color=" . $color);
+                    exit();
                 } catch (Exception $e) {
                     echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
                 }
