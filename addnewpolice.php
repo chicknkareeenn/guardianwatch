@@ -57,7 +57,7 @@ if ($error === 0) {
             ]);
 
             // Prepare the headers
-            $token = "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"; // Replace with your PAT
+            $token = "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"; // Replace with your PAT
             $headers = [
                 "Authorization: token $token",
                 "Content-Type: application/json",
