@@ -7,7 +7,7 @@ if($_SESSION['role'] == "admin"){
 else if($_SESSION['role']=="user"){
           header('refresh:1; url= usermain.php');
 }
-else if($_SESSION['role']=="police"){
+else if($_SESSION['role']=="Police"){
     header('refresh:1; url= policemain.php');
 
 }
