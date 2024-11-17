@@ -8,9 +8,21 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
 
 $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
 
-// Fetch the notification count from the notifications table
-// Fetch the notification count from the emergency table
-// Fetch the notification count from the notifications table
+$profileQuery = "SELECT fullname, username, password, image FROM police WHERE id = '$policeAssign'";
+$profileResult = pg_query($conn, $profileQuery);
+
+// Initialize variables to store profile data
+$fullname = $username = $password = $image = '';
+
+if ($profileResult && pg_num_rows($profileResult) > 0) {
+    $profileData = pg_fetch_assoc($profileResult);
+    $fullname = $profileData['fullname'];
+    $username = $profileData['username'];
+    $password = $profileData['password'];
+    $image = $profileData['image'];
+}
+
+
 // Query to count notifications
 $sql = "SELECT COUNT(*) AS notif_count FROM notifications WHERE police_id = '$policeAssign'";
 $result = pg_query($conn, $sql);
@@ -20,10 +32,13 @@ $notif_count = $row['notif_count'];
 // Query to fetch notifications and corresponding user data from residents table
 $sql_notifications = "SELECT notifications.*, residents.fullname, residents.id
                       FROM notifications
-                      JOIN residents ON notifications.userId = residents.id
+                      JOIN residents ON notifications.userid = residents.id
                       WHERE police_id = '$policeAssign'
                       ORDER BY notifications.notif_id DESC";
 $result_notifications = pg_query($conn, $sql_notifications);
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -32,7 +47,7 @@ $result_notifications = pg_query($conn, $sql_notifications);
     <!-- Required meta tags and CSS links -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <title>Police Panel</title>
     <link rel="stylesheet" href="path/to/bootstrap.css"> <!-- Include Bootstrap CSS -->
     <script src="path/to/bootstrap.bundle.js"></script> <!-- Include Bootstrap JS bundle -->
 </head>
@@ -66,6 +81,7 @@ $result_notifications = pg_query($conn, $sql_notifications);
                         $row = pg_fetch_assoc($result);
                         echo $row['image'];
                     ?>" alt="Profile" class="rounded-circle">
+                    
                     <span class="d-none d-md-block dropdown-toggle ps-2"><?php
                         echo $row['fullname'];
                     ?></span>
@@ -81,6 +97,12 @@ $result_notifications = pg_query($conn, $sql_notifications);
                     <li>
                         <hr class="dropdown-divider">
                     </li>
+                    <li>
+                    <a class="dropdown-item d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                        <i class="bi bi-gear"></i>
+                        <span>Profile Settings</span>
+                    </a>
+                    </li>
 
                     <li>
                         <a class="dropdown-item d-flex align-items-center" href="logout.php">
@@ -88,6 +110,7 @@ $result_notifications = pg_query($conn, $sql_notifications);
                             <span>Logout</span>
                         </a>
                     </li>
+                    
                 </ul><!-- End Profile Dropdown Items -->
             </li><!-- End Profile Nav -->
 
@@ -220,6 +243,50 @@ $result_notifications = pg_query($conn, $sql_notifications);
         </div>
     </div>
 </div>
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileModalLabel">Profile Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Profile form -->
+                <form id="profileForm" action="update_profile.php" method="POST" enctype="multipart/form-data">
+                    <!-- Full Name -->
+                    <div class="mb-3">
+                        <label for="fullname" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="fullname" name="fullname" value="<?php echo htmlspecialchars($fullname); ?>" required>
+                    </div>
+                    
+                    <!-- Username -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" value="<?php echo htmlspecialchars($username); ?>" required>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="mb-3 position-relative">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" value="<?php echo htmlspecialchars($password); ?>" required>
+                        <!-- Eye Icon for toggling visibility -->
+                        <i class="bi bi-eye-slash position-absolute" id="togglePassword" style="right: 15px; top: 74%; transform: translateY(-50%); cursor: pointer;"></i>
+                    </div>
+
+                    <!-- Profile Image -->
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Profile Image</label>
+                        <input type="file" class="form-control" id="image" name="image">
+                        <img src="https://raw.githubusercontent.com/chicknkareeenn/guardianwatch/master/upload/<?php echo $image; ?>" alt="Current Image" class="img-thumbnail mt-2" style="width: 100px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 let currentNotificationId = null;
@@ -314,6 +381,23 @@ function sendReply() {
     xhr.send(`notification_id=${currentNotificationId}&reply_message=${encodeURIComponent(replyMessage)}`);
 }
 
+</script>
+
+<script>
+    // Select the eye icon and password input field
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('password');
+
+    // Toggle password visibility on click
+    togglePassword.addEventListener('click', function () {
+        // Toggle the type of the password field
+        const type = passwordField.type === 'password' ? 'text' : 'password';
+        passwordField.type = type;
+
+        // Toggle the eye icon between "bi-eye" (visible) and "bi-eye-slash" (hidden)
+        this.classList.toggle('bi-eye');
+        this.classList.toggle('bi-eye-slash');
+    });
 </script>
 
 </body>
