@@ -114,13 +114,6 @@ $result_notifications = pg_query($conn, $sql_notifications);
         </li>
         
         <li class="nav-item">
-            <a class="nav-link collapsed" href="mapss.php" style="background-color:#add8e6;color: #184965;">
-                <i class="bi bi-map" style="color: #184965;"></i>
-                <span>Emergency Map</span>
-            </a>
-        </li>
-        
-        <li class="nav-item">
             <a class="nav-link collapsed" href="reject.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-x-circle" style="color: #184965;"></i>
                 <span>Rejected Reports</span>
