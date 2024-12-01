@@ -46,6 +46,7 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
         margin-bottom: 10px;
         margin-top: 10px;
     }
+    
   </style>
 </head>
 
@@ -87,9 +88,8 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
                   <th scope="col">Victim Name</th>
                   <th scope="col">Case</th>
                   <th scope="col">Details</th>
-                  <th scope="col">Witness Name</th>
                   <th scope="col">File Date</th>
-                  <th scope="col">Police Assign</th>
+                  <th scope="col">Current Status</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -100,7 +100,7 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
                           FROM reports AS r 
                           INNER JOIN police AS p ON r.police_assign = p.id 
                           INNER JOIN residents AS u ON r.user_id = u.id
-                          WHERE r.finish = 'Ongoing' and r.police_assign = '$policeAssign'"; // Using the $policeAssign variable safely
+                          WHERE r.police_assign = $policeAssign and r.finish = 'Ongoing' or r.finish = 'Under Investigation' or r.finish = 'Investigation Done'"; // Using the $policeAssign variable safely
                   
                   $result = pg_query($conn, $sql);  // Execute query with pg_query() for PostgreSQL
                   if ($result) {
@@ -110,10 +110,17 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
                         echo "<td>".$row['name']."</td>";
                         echo "<td>".$row['category']."</td>";
                         echo "<td>".$row['description']."</td>";
-                        echo "<td>".$row['witness']."</td>";
                         echo "<td>".$row['file_date']."</td>";
-                        echo "<td>".$row['police']."</td>";
-                        echo "<td><center><a class='btn btn-sm' href='policeviewreports.php?id=".$row['id']."&id2=3' style='background-color: #184965;color: white;'>View</a></center></td>";
+                        echo "<td>".$row['finish']."</td>";
+                        echo "<td><center>
+                          <a class='btn btn-sm' href='policeviewreports.php?id=".$row['id']."&id2=3' style='background-color: #184965;color: white;margin-bottom: 5px;'>
+                            <i class='bi bi-eye'></i>
+                          </a>
+                          <a class='btn btn-sm' href='#' style='background-color: #f39c12;color: white;' 
+                            onclick='openUpdateModal(".$row['id'].", \"".$row['name']."\", \"".$row['category']."\", \"".$row['description']."\", \"".$row['file_date']."\", \"".$row['finish']."\")'>
+                              <i class='bi bi-pencil'></i>
+                          </a>
+                        </center></td>";
                         echo "</tr>";
                       }
                   } else {
@@ -150,6 +157,39 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="updateModalLabel">Case Updates</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Dropdown for Update Type -->
+        <label for="updateType" class="form-label">Select Update Type:</label>
+        <select id="updateType" class="form-select">
+          <option value="" selected disabled>Select update type</option>
+          <option value="status">Change Status of Case</option>
+          <option value="schedule">Interview Schedule or Court Dates</option>
+          <option value="closure">Case Closure Summary</option>
+          <option value="followup">Follow-Up Requirements</option>
+        </select>
+
+        <!-- Dynamic Fields -->
+        <div id="dynamicFields" class="mt-3">
+          <!-- Fields will be inserted here dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" id="saveUpdateBtn" class="btn btn-primary">Save Update</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
   <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 
@@ -218,6 +258,146 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
       });
     });
   </script>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const updateType = document.getElementById('updateType');
+    const dynamicFields = document.getElementById('dynamicFields');
+    const saveUpdateBtn = document.getElementById('saveUpdateBtn');
+    const currentStatus = 'Ongoing'; // This would typically be fetched from the server or database
+
+    // Listen for update type change
+    updateType.addEventListener('change', () => {
+      const type = updateType.value;
+      dynamicFields.innerHTML = ''; // Clear any previous fields
+
+      if (type === 'status') {
+        dynamicFields.innerHTML = `
+          <label for="caseStatus" class="form-label">Current Status:</label>
+          <input type="text" id="caseStatus" class="form-control" value="${currentStatus}" readonly>
+          
+          <label for="newStatus" class="form-label mt-2">New Status:</label>
+          <select id="newStatus" class="form-control">
+            <option value="Under Investigation" ${currentStatus === 'Under Investigation' ? 'selected' : ''}>Under Investigation</option>
+            <option value="Investigation Done" ${currentStatus === 'Investigation Done' ? 'selected' : ''}>Investigation Done</option>
+          </select>
+        `;
+      } else if (type === 'schedule') {
+            dynamicFields.innerHTML = `
+              <label for="scheduleDetails" class="form-label">Interview or Court Date Details:</label>
+              <textarea id="scheduleDetails" class="form-control" rows="3" placeholder="Enter schedule details"></textarea>
+              
+              <label for="scheduleDate" class="form-label mt-3">Select Date:</label>
+              <input type="date" id="scheduleDate" class="form-control">
+              
+              <label for="scheduleTime" class="form-label mt-3">Select Time:</label>
+              <input type="time" id="scheduleTime" class="form-control">
+            `;
+          }else if (type === 'closure') {
+        dynamicFields.innerHTML = `
+          <label for="closureSummary" class="form-label">Closure Summary:</label>
+          <textarea id="closureSummary" class="form-control" rows="3" placeholder="Enter closure summary"></textarea>
+          <label for="closureReason" class="form-label mt-2">Reasons for Resolution:</label>
+          <textarea id="closureReason" class="form-control" rows="2" placeholder="Enter reasons"></textarea>
+        `;
+      } else if (type === 'followup') {
+        dynamicFields.innerHTML = `
+          <label for="followUpDetails" class="form-label">Follow-Up Requirements:</label>
+          <textarea id="followUpDetails" class="form-control" rows="3" placeholder="Enter follow-up requirements"></textarea>
+        `;
+      } 
+    });
+
+    // Save Update Button Logic
+    saveUpdateBtn.addEventListener('click', () => {
+      const type = updateType.value;
+      const reportId = document.getElementById('reportId').value; // Fetch the report ID
+
+      // Collect data based on selected type
+      let data = { reportId, type };
+      if (type === 'status') {
+        data.status = document.getElementById('newStatus').value;
+      } else if (type === 'schedule') {
+        data.scheduleDetails = document.getElementById('scheduleDetails').value;
+        data.scheduleDate = document.getElementById('scheduleDate').value;
+        data.scheduleTime = document.getElementById('scheduleTime').value;
+    }  else if (type === 'closure') {
+        data.closureSummary = document.getElementById('closureSummary').value;
+        data.closureReason = document.getElementById('closureReason').value;
+      } else if (type === 'followup') {
+        data.followUpDetails = document.getElementById('followUpDetails').value;
+      } else if (type === 'feedback') {
+        data.feedbackPrompt = document.getElementById('feedbackPrompt').value;
+      }
+
+      // Send AJAX request to save update
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'save_case_update.php', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+          alert('Update saved successfully!');
+          location.reload(); // Reload to show the updated data
+        }
+      };
+      xhr.send(JSON.stringify(data));
+    });
+  });
+</script>
+
+
+<script>
+    function openUpdateModal(id, name, category, description, fileDate, police) {
+        // Populate the modal fields with the data
+        document.getElementById('reportId').value = id;
+        document.getElementById('modalName').textContent = name;
+        document.getElementById('modalCategory').textContent = category;
+        document.getElementById('modalDescription').textContent = description;
+        document.getElementById('modalFileDate').textContent = fileDate;
+        document.getElementById('modalPolice').textContent = police;
+
+        // Show the modal
+        var updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+        updateModal.show();
+    }
+
+    document.getElementById('saveUpdateBtn').addEventListener('click', function() {
+        const id = document.getElementById('reportId').value;
+        const name = document.getElementById('modalName').textContent;
+        const category = document.getElementById('modalCategory').textContent;
+        const description = document.getElementById('modalDescription').textContent;
+        const fileDate = document.getElementById('modalFileDate').textContent;
+        const police = document.getElementById('modalPolice').textContent;
+
+        const data = {
+            id,
+            name,
+            category,
+            description,
+            fileDate,
+            finish
+        };
+
+        // Example: Send data via fetch
+        fetch('update_case.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(result => {
+            alert('Update successful');
+            location.reload(); // Reload the page to reflect changes
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Update failed');
+        });
+    });
+</script>
 
 
 
