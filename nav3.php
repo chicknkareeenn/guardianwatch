@@ -158,12 +158,6 @@ $result_notifications = pg_query($conn, $sql_notifications);
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link collapsed" href="announce.php" style="background-color:#add8e6;color: #184965;">
-                <i class="bi-megaphone" style="color: #184965;"></i>
-                <span>Announcements</span>
-            </a>
-        </li>
-        <li class="nav-item">
             <a class="nav-link collapsed" href="documents.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi-file-earmark" style="color: #184965;"></i>
                 <span>Documents</span>
