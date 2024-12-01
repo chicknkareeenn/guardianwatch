@@ -274,9 +274,6 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
 
       if (type === 'status') {
         dynamicFields.innerHTML = `
-          <label for="caseStatus" class="form-label">Current Status:</label>
-          <input type="text" id="caseStatus" class="form-control" value="${currentStatus}" readonly>
-          
           <label for="newStatus" class="form-label mt-2">New Status:</label>
           <select id="newStatus" class="form-control">
             <option value="Under Investigation" ${currentStatus === 'Under Investigation' ? 'selected' : ''}>Under Investigation</option>
