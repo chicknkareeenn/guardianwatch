@@ -164,7 +164,7 @@
                                            r.finish, r.witness, r.status
                                     FROM reports AS r
                                     INNER JOIN residents AS u ON r.user_id = u.id
-                                    WHERE r.status = 'Acceptable' AND r.finish IS NULL;
+                                    WHERE r.status = 'Acceptable' AND r.finish IS NULL or r.finish = '';
                                 ";
 
                                 // Use PostgreSQL connection
