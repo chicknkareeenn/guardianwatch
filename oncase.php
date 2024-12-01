@@ -100,8 +100,8 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
                           FROM reports AS r 
                           INNER JOIN police AS p ON r.police_assign = p.id 
                           INNER JOIN residents AS u ON r.user_id = u.id
-                          WHERE r.police_assign = $policeAssign and r.finish = 'Ongoing' or r.finish = 'Under Investigation' or r.finish = 'Investigation Done'"; // Using the $policeAssign variable safely
-                  
+                          WHERE r.police_assign = $policeAssign 
+                            AND (r.finish = 'Ongoing' OR r.finish = 'Under Investigation' OR r.finish = 'Investigation Done')";
                   $result = pg_query($conn, $sql);  // Execute query with pg_query() for PostgreSQL
                   if ($result) {
                       while ($row = pg_fetch_assoc($result)) {  // Use pg_fetch_assoc() to fetch rows
