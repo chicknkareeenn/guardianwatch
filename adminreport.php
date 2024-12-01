@@ -106,7 +106,13 @@
   <audio id="alertSound" src="alert.mp3" preload="auto"></audio>
 
     <div class="pagetitle">
-      <h1>New Report</h1>
+      <h1>New Report
+      <div class="float-end">
+        <button class="btn btn-sm" style="background-color: #184965; color: white;" data-bs-toggle="modal" data-bs-target="#exampleModal">
+            <i class="bi bi-plus-lg"></i> Add New Report
+        </button>
+    </div>
+      </h1>
 
       <nav>
        
@@ -144,7 +150,6 @@
                         <th scope="col">Case</th>
                         <th scope="col">Details</th>
                         <th scope="col">File Date</th>
-                        <th scope="col">Witness Name</th>
                         <th scope="col">Action</th>
 
                       
@@ -159,7 +164,7 @@
                                            r.finish, r.witness, r.status
                                     FROM reports AS r
                                     INNER JOIN residents AS u ON r.user_id = u.id
-                                    WHERE r.status = 'Acceptable' AND r.finish = '';
+                                    WHERE r.status = 'Acceptable' AND r.finish IS NULL;
                                 ";
 
                                 // Use PostgreSQL connection
@@ -171,7 +176,6 @@
                                     echo "<td>" . $row['category'] . "</td>";
                                     echo "<td>" . $row['description'] . "</td>";
                                     echo "<td>" . $row['file_date'] . "</td>";
-                                    echo "<td>" . $row['witness'] . "</td>";
                                     echo "<td>
                                         <button class='btn btn-sm btn-primary' onclick='callmodal1(\"" . $row['id'] . "\", \"" . $row['category'] . "\")'>Assign</button>
                                         <button class='btn btn-danger btn-sm' onclick='callmodal(\"" . $row['id'] . "\")'>Reject</button>
@@ -212,6 +216,8 @@
   <script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
   <script src="assets/vendor/tinymce/tinymce.min.js"></script>
   <script src="assets/vendor/php-email-form/validate.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 
   <!-- Template Main JS File -->
   <script src="assets/js/main.js"></script>
@@ -269,7 +275,222 @@
                             </div>
                         </div>
                     </div>
+                    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #184965;color: white;">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Add New Report</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Step indicators -->
+                <div class="d-flex justify-content-center mb-3">
+                    <ul class="nav nav-pills mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="step1-tab" href="#"><i class="bi bi-1-square"></i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="step2-tab" href="#"><i class="bi bi-2-square"></i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="step3-tab" href="#"><i class="bi bi-3-square"></i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="step4-tab" href="#"><i class="bi bi-4-square"></i></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="step5-tab" href="#"><i class="bi bi-5-square"></i></a>
+                        </li>
+                    </ul>
+                </div>
 
+                <form id="multiStepForm" action="addreports.php" method="post" enctype='multipart/form-data'>
+                    <!-- Step 1 -->
+                    <div class="step" id="step1">
+
+                      <center><h4><b>Select Crime Category</b></h4></center>
+                        <select class="form-select" aria-label="Default select example" name="crime">
+                          <option selected>Select Crime Category</option>
+                          <?php
+                        $sql = "SELECT * FROM categories";
+                        $result = pg_query($conn, $sql);
+                        
+                        if ($result) {
+                            while ($row = pg_fetch_array($result)) {
+                                echo "<option value='".$row['category']."'>".$row['category']."</option>";
+                            }
+                        } 
+                        ?>
+                        </select>
+                        <div class="form-floating mt-3 mb-3">
+
+                          
+                        </div>
+                        <button type="button" class="btn" style="background-color:#184965;color: white;" id="next1">Next</button>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="step" id="step2" style="display:none;">
+                        <center><h4><b>Personal information</b></h4></center>
+                        
+                        <div class="mb-3">
+                            <label for="step2Input1" class="form-label">Name of the Victim</label>
+                            <input type="text" class="form-control" id="step2Input1" name="victim" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <select class="form-select" aria-label="Default select example" name="address" required>
+                                <option selected>Select Barangay</option>
+                                <?php
+                                $sql = "SELECT * FROM barangay";
+                                $result = pg_query($conn, $sql);
+                                if ($result) {
+                                    while ($row = pg_fetch_array($result)) {
+                                        echo "<option value='".$row['id']."'>".$row['barangay']."</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="step2Input2" class="form-label">Contact of the Victim</label>
+                            <input type="text" class="form-control" id="step2Input2" name="contact" required>
+                        </div>
+
+                        <!-- Checkbox to indicate if there is a witness -->
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="witnessCheckbox">
+                            <label class="form-check-label" for="witnessCheckbox">Does the Victim have a witness?</label>
+                        </div>
+
+                        <!-- Witness fields, initially hidden -->
+                        <div id="witnessFields" style="display:none;">
+                            <div class="mb-3">
+                                <label for="step2Input2" class="form-label">Name of the Witness</label>
+                                <input type="text" class="form-control witnessName" name="witness[]" placeholder="Witness Name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="step2Input2" class="form-label">Contact</label>
+                                <input type="text" class="form-control witnessContact" name="witcontact[]" placeholder="Witness Contact">
+                            </div>
+
+                            <!-- Button to add another witness -->
+                            <button type="button" class="btn btn-info" id="addWitness">Add Another Witness</button>
+                        </div>
+
+                        <button type="button" class="btn btn-secondary" id="prev2">Previous</button>
+                        <button type="button" class="btn" style="background-color:#184965;color: white;" id="next2">Next</button>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="step" id="step3" style="display:none;">
+                               <center><h4><b>Crime information</b></h4></center>
+                        <div class="mb-3">
+                            <label for="step3Input1" class="form-label">Date of Crime</label>
+                            <input type="date" class="form-control" id="step3Input1" name="datecrime" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="step3Input2" class="form-label">Time of Crime</label>
+                            <input type="time" class="form-control" id="step3Input2" name="timecrime" required>
+                        </div>
+                        <div class="mb-3">
+                        <label for="floatingTextarea2">Describe the Scenario</label>
+                        <textarea class="form-control" placeholder="Ilahad ang Sanaysay" id="floatingTextarea2" name="description" style="height: 100px"></textarea>
+                        </div>
+                        <button type="button" class="btn btn-secondary" id="prev3">Previous</button>
+                        <button type="button" class="btn " style="background-color:#184965;color: white;" id="next3">Next</button>
+                    </div>
+                    <!-- Step 4 -->
+                    <div class="step" id="step4" style="display:none;">
+                        <center><h4><b>Account Creation</b></h4></center>
+                        <div class="mb-3">
+                            <label for="step4Input3" class="form-label">Birth Date</label>
+                            <input type="date" class="form-control" id="step3Input1" name="birthdate" required>
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Gender</label>
+                          <div style="display: flex; align-items: center;">
+                              <div style="margin-right: 10px;">
+                                  <input type="radio" id="male" name="gender" value="Male" required>
+                                  <label for="male">Male</label>
+                              </div>
+                              <div>
+                                  <input type="radio" id="female" name="gender" value="Female" required>
+                                  <label for="female">Female</label>
+                              </div>
+                          </div>
+                      </div>
+                      <div class="mb-3">
+                                <label for="step4Input4" class="form-label">Email Address</label>
+                                <input type="text" class="form-control witnessName" name="email" required>
+                            </div>
+                        <div class="mb-3">
+                            <label for="step4Input1" class="form-label">Default Username</label>
+                            <input type="text" class="form-control" id="step4Input1" name="username" required readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="step4Input2" class="form-label">Default Password</label>
+                            <input type="text" class="form-control" id="step4Input2" name="password" required readonly>
+                        </div>
+                        <button type="button" class="btn btn-secondary" id="prev4">Previous</button>
+                        <button type="button" class="btn" style="background-color:#184965;color: white;" id="next4">Next</button>
+                    </div>
+                    <!-- Step 5 -->
+                    <div class="step" id="step5" style="display:none;">
+                      <center><h4><b>Submit Report</b></h4></center>
+
+
+                       <div class="form-check">
+  <input class="form-check-input" type="checkbox"  id="step5Input1">
+  <label class="form-check-label" for="flexCheckDefault">
+   Agreement of Truthfulness and Access Rights
+  </label>
+</div>
+<p class="mt-3 mb-3" style="text-align: justify;">
+I hereby acknowledge and affirm that all information and evidence provided are true and accurate to the best of my knowledge. I understand and agree that this information may be accessed by authorized personnel, including administrators and law enforcement officers assigned to this matter, for the purposes of investigation and verification. By signing this agreement, I consent to the disclosure and examination of the information by these parties as required for the lawful and proper handling of the case.</p>
+
+
+                        <button type="button" class="btn btn-secondary" id="prev5">Previous</button>
+                        <button type="submit" class="btn" style="background-color:#184965;color: white;" id="submitBtn" disabled>Submit</button>
+                    </div>
+                </form>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" style="background-color: #57737A;color: white;" data-bs-dismiss="modal">Close</button>
+               
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide witness fields based on checkbox
+document.getElementById('witnessCheckbox').addEventListener('change', function () {
+    var witnessFields = document.getElementById('witnessFields');
+    if (this.checked) {
+        witnessFields.style.display = 'block'; // Show witness fields
+    } else {
+        witnessFields.style.display = 'none'; // Hide witness fields
+    }
+});
+
+// Add another witness field when the button is clicked
+document.getElementById('addWitness').addEventListener('click', function () {
+    var witnessFields = document.getElementById('witnessFields');
+    
+    var witnessName = document.createElement('div');
+    witnessName.classList.add('mb-3');
+    witnessName.innerHTML = '<label for="step2Input2" class="form-label">Name of the Witness</label><input type="text" class="form-control witnessName" name="witness[]" placeholder="Witness Name">';
+    
+    var witnessContact = document.createElement('div');
+    witnessContact.classList.add('mb-3');
+    witnessContact.innerHTML = '<label for="step2Input2" class="form-label">Contact</label><input type="text" class="form-control witnessContact" name="witcontact[]" placeholder="Witness Contact">';
+    
+    witnessFields.appendChild(witnessName);
+    witnessFields.appendChild(witnessContact);
+});
+</script>
+                   
 <script type="text/javascript">
 function callmodal1(reportId, category) {
     document.getElementById("arrid1").value = reportId;
@@ -396,5 +617,150 @@ function fetchPoliceByCategory(category) {
     console.error('WebSocket error: ', error);
   };
   </script>
+
+  <script>
+
+const x = document.getElementById("step4Input");
+
+ function getLocation() {
+   if (navigator.geolocation) {
+     navigator.geolocation.getCurrentPosition(showPosition);
+   } else { 
+     x.value = "Geolocation is not supported by this browser.";
+   }
+ }
+
+ function showPosition(position) {
+   x.value = position.coords.latitude +","+ position.coords.longitude;
+
+   console.log(position.coords.latitude);
+ }
+setInterval(getLocation, 5000);
+
+document.addEventListener('DOMContentLoaded', function() {
+       const checkbox = document.getElementById('step5Input1');
+       const submitBtn = document.getElementById('submitBtn');
+
+       checkbox.addEventListener('change', function() {
+           submitBtn.disabled = !checkbox.checked;
+       });
+   });
+
+$(document).ready(function() {
+// Function to check if all inputs, selects, and textareas in the current step are filled
+function validateStep(currentStep) {
+    let isValid = true;
+
+    // Iterate through the fields and check if they are required and empty
+    $(currentStep + ' input, ' + currentStep + ' select, ' + currentStep + ' textarea').each(function() {
+        // Check if the field is required and if it is empty
+        if ($(this).prop('required') && $(this).val() === '') {
+            isValid = false;
+        }
+    });
+
+    return isValid;
+}
+
+// Function to show the specified step
+function showStep(step) {
+   $('.step').hide();
+   $(step).show();
+}
+
+// Function to validate and navigate
+function validateAndNavigate(currentStep, nextStep, currentTab, nextTab) {
+   if (validateStep(currentStep)) {
+       showStep(nextStep);
+       $(currentTab).removeClass('active');
+       $(nextTab).addClass('active');
+       $(currentTab).addClass('completed');  // Mark the current step as completed
+   } else {
+       alert('Please fill out all required fields.');
+   }
+}
+
+// Add click event listeners to the step tabs
+$('.nav-link').click(function() {
+   let stepId = $(this).attr('id').replace('-tab', '');
+   let currentStep = $('.step:visible').attr('id');
+   if (validateStep('#' + currentStep)) {
+       showStep('#' + stepId);
+       $('.nav-link').removeClass('active');
+       $(this).addClass('active');
+       $('#' + currentStep + '-tab').addClass('completed');  // Mark the previous step as completed
+   } else {
+       alert('Please fill out all required fields.');
+   }
+});
+
+// Next button for step 1
+$('#next1').click(function() {
+   validateAndNavigate('#step1', '#step2', '#step1-tab', '#step2-tab');
+});
+
+// Next button for step 2
+$('#next2').click(function() {
+   validateAndNavigate('#step2', '#step3', '#step2-tab', '#step3-tab');
+});
+
+// Next button for step 3
+$('#next3').click(function() {
+   validateAndNavigate('#step3', '#step4', '#step3-tab', '#step4-tab');
+});
+
+// Next button for step 4
+$('#next4').click(function() {
+   validateAndNavigate('#step4', '#step5', '#step4-tab', '#step5-tab');
+});
+
+// Previous buttons
+$('#prev2').click(function() {
+   showStep('#step1');
+   $('#step2-tab').removeClass('active');
+   $('#step1-tab').addClass('active');
+});
+
+$('#prev3').click(function() {
+   showStep('#step2');
+   $('#step3-tab').removeClass('active');
+   $('#step2-tab').addClass('active');
+});
+
+$('#prev4').click(function() {
+   showStep('#step3');
+   $('#step4-tab').removeClass('active');
+   $('#step3-tab').addClass('active');
+});
+
+$('#prev5').click(function() {
+   showStep('#step4');
+   $('#step5-tab').removeClass('active');
+   $('#step4-tab').addClass('active');
+});
+
+
+});
+</script>
+<script>
+    function generateUsername() {
+        // Generate random numbers (3 digits)
+        const randomNumber = Math.floor(100 + Math.random() * 900); // Random number between 100-999
+        return `GW-USER-${randomNumber}`;
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const usernameField = document.getElementById("step4Input1");
+        const passwordField = document.getElementById("step4Input2");
+
+        // Generate username
+        const username = generateUsername();
+
+        // Set username and password to be the same
+        usernameField.value = username;
+        passwordField.value = username;
+    });
+</script>
+
   </html>
 
