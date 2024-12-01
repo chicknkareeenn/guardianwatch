@@ -19,7 +19,6 @@ $witcontact = implode(',', $_POST['witcontact']);
 $date = $_POST['datecrime'];
 $time = $_POST['timecrime'];
 $des = $_POST['description'];
-$location = $_POST['location'];
 
 $birthdate = $_POST['birthdate']; // Victim's birthdate
 $gender = $_POST['gender']; // Male or Female
