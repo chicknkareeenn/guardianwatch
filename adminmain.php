@@ -10,7 +10,7 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
 $selected_year = isset($_POST['year']) ? intval($_POST['year']) : date("Y");
 
 // Query to count new reports for the selected year
-$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish = '' AND EXTRACT(YEAR FROM file_date) = $selected_year";
+$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish IS NULL AND EXTRACT(YEAR FROM file_date) = $selected_year";
 $result = pg_query($conn, $sql);
 
 $count = ($result) ? pg_fetch_result($result, 0, 'count') : 0;
@@ -94,7 +94,7 @@ pg_close($conn);
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Crime Reports</title>
+  <title>Guardian Watch</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -127,23 +127,6 @@ pg_close($conn);
       margin-bottom: 15px; /* Space between cards */
     }
 
-    #map {
-      height: 360vh;
-      border-radius: 5px;
-      box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);
-    }
-
-    /* Adjust line chart and bubble chart height on mobile */
-    #lineChart, #bubbleChart {
-      height: 210px; /* Adjust height for mobile */
-    }
-
-    /* Media Queries */
-    @media (max-width: 768px) {
-      #lineChart, #barChart {
-        height: 150px; /* Reduce height for smaller screens */
-      }
-    }
     .modal1 {
       display: none;
       position: fixed;
@@ -178,18 +161,10 @@ pg_close($conn);
       text-decoration: none;
       cursor: pointer;
     }
+    #map { height: 70vh; }
     .modal-content h2 i {
       margin-right: 18px;
       color: #f0ad4e;
-    }
-    #bubbleChart {
-      width: 100% !important;
-      height: 400px;
-    }
-    #lineChart {
-      width: 102% !important;
-      height: 210px;
-      margin-left: 13px;
     }
     .pagetitle {
       display: flex;
@@ -297,39 +272,81 @@ pg_close($conn);
               </div>
             </a>
           </div>
-
-          <div class="col-xxl-6 col-md-6">
-
-          <canvas id="barChart" style="height: 50px; width:-7%; border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></canvas>
-                
-          </div>
-          </div>
-   
-  </div>
-</div>
-
-    <!-- Customers Card 1 -->
-
-    <div class="row">
-          <div class="col-xxl-6 col-md-6">
-            <div style="height: 60vh; width: 102%; background-color: white; margin-top: -100px; padding: 10px; border-radius: 5px; box-shadow: 0px 0 15px rgba(0, 0, 0, 0.1);">
-                <div style="background-color: white; padding: 10px; border-radius: 5px; text-align: center;">
-                    <h6 style="margin: 0; font-weight: bold; font: size 16px; color: #333;">Geographic Density of Emergency Cases</h6>
+          <div class="col-xxl-3 col-md-6">
+            <a href="adminoncase.php">
+              <div class="card info-card sales-card">
+                <div class="card-body">
+                  <h5 class="card-title">Ongoing Cases</h5>
+                  <div class="d-flex align-items-center">
+                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                    <i class="bi bi-hourglass-split" style="color: #184965;"></i>
+                    </div>
+                    <div class="ps-3">
+                      <h6><?php echo $ongoing_count; ?></h6>
+                    </div>
+                  </div>
                 </div>
-                <div style="padding-top: 100px;"> 
-                    <div id="map" style="height: 50vh; width: 100%; margin-top: -100px; border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></div>
+              </div>
+            </a>
+          </div>
+          <!-- Emergency Card -->
+          <div class="col-xxl-3 col-md-6">
+            <a href="mapss.php">
+              <div class="card info-card">
+                <div class="card-body">
+                  <h5 class="card-title">Emergency</h5>
+                  <div class="d-flex align-items-center">
+                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="background-color:#C9FBFF;">
+                      <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="ps-3">
+                    <h6><?php echo $ongoing_count; ?></h6>
+                    </div>
+                  </div>
                 </div>
-            </div>
+              </div>
+            </a>
+          </div>
         </div>
+      </div>
+    </section>
 
-            <div class="col-xxl-6 col-md-6">
-              <canvas id="lineChart" style="height: 315px; width: 50%;border-radius: 5px; margin-top: 19px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></canvas>
+    <section class="section dashboard">
+      <div class="container">
+        <div class="row">
+          <div class="col-xxl-6 col-md-6">
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <canvas id="barChart" style="width:100%;max-width:600px"></canvas>
+              </div>
             </div>
-            
           </div>
+          <div class="col-xxl-6 col-md-6">
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <canvas id="lineChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="section dashboard">
+      <div class="container">
+        <div class="row">
+          <div class="col-xxl-12 col-md-12">
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <center><h5 class="card-title">Geographic Density of Emergency Reports</h5></center>
+                <div id="map"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
    
-  </div>
-</div>
+ 
 </section>
     <div id="emergencyAlertModal" class="modal1">
       <div class="modal-content1">
