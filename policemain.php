@@ -6,43 +6,36 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
     header('location:index.php');
     exit();
 }
+
+$selected_year = isset($_POST['year']) ? intval($_POST['year']) : date("Y");
 $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
 
-// Query to count reports where finish is 'Unsettled'
-$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish = ''";
-$result = pg_query($conn, $sql);
+// Query to count new reports for the selected year
+$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish = 'Unsettled' AND police_assign = $1 AND EXTRACT(YEAR FROM file_date) = $2";
+$result = pg_query_params($conn, $sql, array($policeAssign, $selected_year));
 
-if ($result) {
-    $row = pg_fetch_assoc($result);
-    $count = $row['count'];
-} else {
-    $count = 0;
-}
+$count = ($result) ? pg_fetch_result($result, 0, 'count') : 0;
 
-// Query to count all available police
+// Query to count available police
 $sql_police = "SELECT COUNT(*) AS police_count FROM police WHERE status = 'Available'";
 $result_police = pg_query($conn, $sql_police);
 
-if ($result_police) {
-    $row_police = pg_fetch_assoc($result_police);
-    $police_count = $row_police['police_count'];
-} else {
-    $police_count = 0;
-}
+$police_count = ($result_police) ? pg_fetch_result($result_police, 0, 'police_count') : 0;
 
-// Query to count ongoing cases
-$sql_cases = "SELECT COUNT(*) AS ongoing_count FROM reports WHERE finish = 'Ongoing' AND police_assign = $1";
-$result_cases = pg_query_params($conn, $sql_cases, array($policeAssign));
+// Query to count ongoing cases for the selected year
+$sql_cases = "
+SELECT COUNT(*) AS ongoing_count 
+FROM reports 
+WHERE police_assign = $1 
+  AND EXTRACT(YEAR FROM file_date) = $2 
+  AND (finish = 'Ongoing' OR finish = 'Under Investigation' OR finish = 'Investigation Done')
+";
+$result_cases = pg_query_params($conn, $sql_cases, array($policeAssign, $selected_year));
 
-if ($result_cases) {
-    $row_cases = pg_fetch_assoc($result_cases);
-    $ongoing_count = $row_cases['ongoing_count'];
-} else {
-    $ongoing_count = 0;
-}
+$ongoing_count = ($result_cases) ? pg_fetch_result($result_cases, 0, 'ongoing_count') : 0;
 
-// Query to get total crimes by category
-$sql_category = "SELECT category, COUNT(*) AS category_count FROM reports GROUP BY category";
+// Query to get total crimes by category for the selected year
+$sql_category = "SELECT category, COUNT(*) AS category_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year GROUP BY category";
 $result_category = pg_query($conn, $sql_category);
 $category_data = [];
 $category_labels = [];
@@ -53,13 +46,15 @@ while ($row_category = pg_fetch_assoc($result_category)) {
     $category_counts[] = $row_category['category_count'];
 }
 
-// Query to get total crimes reported by month
+// Query to get total crimes reported by month for the selected year
 $sql_monthly = "
 SELECT 
     TO_CHAR(file_date, 'YYYY-Mon') AS month,
     COUNT(*) AS total_crimes
 FROM 
     reports
+WHERE 
+    EXTRACT(YEAR FROM file_date) = $selected_year
 GROUP BY 
     month
 ORDER BY 
@@ -71,14 +66,14 @@ $monthly_data = [];
 $monthly_labels = [];
 
 if ($result_monthly) {
-  while ($row_monthly = pg_fetch_assoc($result_monthly)) {
-      $monthly_labels[] = $row_monthly['month']; // Store month in YYYY-MMM format
-      $monthly_data[] = $row_monthly['total_crimes']; // Store the count of crimes
-  }
+    while ($row_monthly = pg_fetch_assoc($result_monthly)) {
+        $monthly_labels[] = $row_monthly['month']; // Store month in YYYY-MMM format
+        $monthly_data[] = $row_monthly['total_crimes']; // Store the count of crimes
+    }
 }
 
-// Query to get emergency locations
-$sql_emergency = "SELECT location, lat FROM emergency";
+// Query to get emergency locations for the selected year
+$sql_emergency = "SELECT location, lat FROM emergency WHERE EXTRACT(YEAR FROM report_date) = $selected_year";
 $result_emergency = pg_query($conn, $sql_emergency);
 
 $emergency_locations = [];
@@ -98,13 +93,15 @@ if ($result_emergency) {
 pg_close($conn);
 ?>
 
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Crime Reports</title>
+  <title>Guardian Watch</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -126,11 +123,17 @@ pg_close($conn);
   <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-<hash>" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMiW0t0z5A4uY8Q5ZO1+QAc2P5p/dR9u5ViB3" crossorigin="anonymous">
+
 
   <!-- Template Main CSS File -->
   <link href="assets/css/style.css" rel="stylesheet">
 
   <style>
+    .card {
+      margin-bottom: 15px; /* Space between cards */
+    }
+
     .modal1 {
       display: none;
       position: fixed;
@@ -165,18 +168,38 @@ pg_close($conn);
       text-decoration: none;
       cursor: pointer;
     }
+    #map { height: 70vh; }
     .modal-content h2 i {
       margin-right: 18px;
       color: #f0ad4e;
     }
-    #bubbleChart {
-      width: 100% !important;
-      height: 400px;
+    .pagetitle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    #lineChart {
-      width: 102% !important;
-      height: 210px;
-      margin-left: 13px;
+    .year-filter {
+      display: flex;
+      align-items: center;
+      margin-left: 20px;
+    }
+
+    .year-filter label {
+      margin-right: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #184965;
+    }
+
+    .dropdown-container {
+      display: inline-block; /* Ensures the dropdown is inline with the label */
+    }
+    #clock {
+      font-size: 20px;
+      font-weight: bold;
+      color: #184965;
+      margin: 0 15px;
+      /* Additional styles to resemble a cellphone clock */
     }
 
     
@@ -191,8 +214,29 @@ pg_close($conn);
 
     <div class="pagetitle">
       <h1>Dashboard</h1>
-      <nav></nav>
-    </div><!-- End Page Title -->
+
+      <div style="display: flex; align-items: center;"> 
+          <i class="fas fa-clock" style="font-size: 20px; color: #184965; margin-right: -5px;"></i>
+          <div id="clock" style="font-size: 20px; font-weight: bold; color: #184965; margin-right: 15px;"></div>
+
+          <i class="fas fa-calendar-alt" style="font-size: 20px; color: #184965; margin-right: 7px; margin-left:100px;"></i>
+          <div id="date" style="font-size: 20px; font-weight: bold; color: #184965;"></div>
+      </div>
+
+      <div class="year-filter">
+            <i class="fas fa-filter" style="font-size: 17px; color: #184965; margin-right: 7px;"></i>
+            <label for="year">Filter Year:</label>
+            <form method="POST" action="">
+              <select name="year" id="year" onchange="this.form.submit();">
+                <?php for ($i = 2000; $i <= date("Y"); $i++): ?>
+                  <option value="<?php echo $i; ?>" <?php if ($i == $selected_year) echo 'selected'; ?>><?php echo $i; ?></option>
+                <?php endfor; ?>
+              </select>
+            </form>
+          </div>
+        </div>
+    </div>
+
 
     <section class="section dashboard">
       <div class="container">
@@ -235,28 +279,81 @@ pg_close($conn);
               </div>
             </a>
           </div>
-
-          <div class="col-xxl-6 col-md-6">
-
-          <canvas id="barChart" style="height: 50px; width:-7%; border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></canvas>
-                
+          <div class="col-xxl-3 col-md-6">
+            <a href="oncase.php">
+              <div class="card info-card sales-card">
+                <div class="card-body">
+                  <h5 class="card-title">Ongoing Cases</h5>
+                  <div class="d-flex align-items-center">
+                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                    <i class="bi bi-hourglass-split" style="color: #184965;"></i>
                     </div>
-
-    <!-- Customers Card 1 -->
-
-    <div class="row">
-            <div class="col-6">
-              <div id="map" style="height: 420px; width:102%; margin-top: -100px;border-radius: 5px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></div>
-            </div>
-
-            <div class="col-6">
-              <canvas id="lineChart" style="height: 315px; width: 50%;border-radius: 5px; margin-top: 19px; box-shadow: 0px 0 30px rgba(1, 41, 112, 0.1);"></canvas>
-            </div>
-            
+                    <div class="ps-3">
+                      <h6><?php echo $ongoing_count; ?></h6>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a>
           </div>
+          <!-- Emergency Card -->
+          <div class="col-xxl-3 col-md-6">
+            <a href="mapss.php">
+              <div class="card info-card">
+                <div class="card-body">
+                  <h5 class="card-title">Emergency</h5>
+                  <div class="d-flex align-items-center">
+                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="background-color:#C9FBFF;">
+                      <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="ps-3">
+                    <h6><?php echo $ongoing_count; ?></h6>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dashboard">
+      <div class="container">
+        <div class="row">
+          <div class="col-xxl-6 col-md-6">
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <canvas id="barChart" style="width:100%;max-width:600px"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-xxl-6 col-md-6">
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <canvas id="lineChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="section dashboard">
+      <div class="container">
+        <div class="row">
+          <div class="col-xxl-12 col-md-12">
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <center><h5 class="card-title">Geographic Density of Emergency Reports</h5></center>
+                <div id="map"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
    
-  </div>
-</div>
+ 
 </section>
     <div id="emergencyAlertModal" class="modal1">
       <div class="modal-content1">
@@ -361,7 +458,7 @@ pg_close($conn);
   }
 
   // WebSocket setup
-  const ws = new WebSocket('ws://localhost:8080');
+  const ws = new WebSocket('wss://reporting-9wym.onrender.com');
 
   ws.onopen = () => {
     console.log('WebSocket connection established');
@@ -398,52 +495,47 @@ pg_close($conn);
     const heat = L.heatLayer(heatmapData, { radius: 25, blur: 15 }).addTo(map);
     
 
-    const ctx = document.getElementById('lineChart').getContext('2d');
-    
-    const lineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: <?php echo json_encode($monthly_labels); ?>,
-            datasets: [{
-                label: 'Total Number of Reports',
-                data: <?php echo json_encode($monthly_data); ?>,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)', // Adjust to match your color
-                borderColor: '#184965',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.1, // Smooth the line
-                pointRadius: 5, // Adjust point size for better visibility
-                pointHoverRadius: 7,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-            title: {
-                display: true,
-                text: 'Monthly Reported Crimes', // Title for the line chart
-                font: {
+    const lineChartCtx = document.getElementById('lineChart').getContext('2d');
+    const lineChart = new Chart(lineChartCtx, {
+      type: 'line',
+      data: {
+        labels: <?php echo json_encode($monthly_labels); ?>,
+        datasets: [{
+          label: 'Total Crimes',
+          data: <?php echo json_encode($monthly_data); ?>,
+          backgroundColor: 'rgba(75, 192, 192, 0.2)', // Adjust to match your color
+          borderColor: '#184965',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.1, // Smooth the line
+          pointRadius: 5, // Adjust point size for better visibility
+          pointHoverRadius: 7,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: 'Monthly Crime Statistics for Year <?php echo $selected_year; ?>',
+            font: {
                     size: 16 // Font size for the title
                 },
                 color: '#333'
-            }
+          }
         },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Month',
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Number of Crimes'
-                    }
-                }
-            }
+        scales: {
+          y: {
+            beginAtZero: true
+          }
         }
+      }
     });
+
 });
 
     const locations = ['Robbery', 'Assault', 'Burglary', 'Vandalism', 'Theft'];
@@ -485,24 +577,20 @@ const borderColors = [
     }));
 
     // Bar Chart Data
-  const categoryLabels = <?php echo json_encode($category_labels); ?>;
-  const categoryCounts = <?php echo json_encode($category_counts); ?>;
-
-  // Create Bar Chart
-  const ctx = document.getElementById('barChart').getContext('2d');
-  const barChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: categoryLabels, // Categories
-      datasets: [{
-        label: 'Total Number of Reports', // Label for the chart
-        data: categoryCounts, // Count of reports for each category
-        backgroundColor: '#184965', // Bar color
-        borderColor: '#184965', // Bar border color
-        borderWidth: 1
-      }]
-    },
-    options: {
+    const barChartCtx = document.getElementById('barChart').getContext('2d');
+    const barChart = new Chart(barChartCtx, {
+      type: 'bar',
+      data: {
+        labels: <?php echo json_encode($category_labels); ?>,
+        datasets: [{
+          label: 'Crimes by Category',
+          data: <?php echo json_encode($category_counts); ?>,
+          backgroundColor: '#184965', // Bar color
+          borderColor: '#184965', // Bar border color
+          borderWidth: 1
+        }]
+      },
+      options: {
       scales: {
         y: {
           beginAtZero: true // Start y-axis at 0
@@ -512,16 +600,14 @@ const borderColors = [
                 x: {
                     title: {
                         display: true,
-                        text: 'Category',
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Number of Crimes'
-                    }
-                }
-            },
+                        text: 'Crime Reports for Year <?php echo $selected_year; ?>'
+          }
+        },
+        
+          y: {
+            beginAtZero: true
+          }
+      },
       plugins: {
             title: {
                 display: true,
@@ -536,6 +622,29 @@ const borderColors = [
 });
 
   </script>
+
+<script>
+  // Function to update time and date
+function updateClock() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = now.toLocaleDateString(undefined, options);
+    
+    // Get current time
+    const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Update the clock and date elements
+    document.getElementById('clock').textContent = currentTime;
+    document.getElementById('date').textContent = formattedDate;
+}
+
+// Update clock and date every second
+setInterval(updateClock, 1000);
+
+// Initial call to display immediately on load
+updateClock();
+
+</script>
 
 
 
