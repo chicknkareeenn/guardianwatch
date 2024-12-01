@@ -100,12 +100,6 @@ try {
                       Please keep these details safe. You can use these to access the application.<br><br>
                       Sincerely,<br>
                       Nasugbu Municipal Police Station";
-    // Send the email
-    if ($mail->send()) {
-        echo 'Message has been sent to ' . $email;
-    } else {
-        echo 'Message could not be sent. Mailer Error: ' . $mail->ErrorInfo;
-    }
 
     // Redirect or display success message
     $error_message = "You Successfully Created a report";
