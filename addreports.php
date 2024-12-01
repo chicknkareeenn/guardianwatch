@@ -56,14 +56,14 @@ try {
 
     // Insert report details into reports table
     $report_sql = "INSERT INTO reports(
-                        category, name, address, contact, witness, witnessno, crimedate, time, description, file_date, finish, status, user_id
+                        category, name, address, contact, witness, witnessno, crimedate, time, description, file_date, finish, status, user_id, gender
                      ) 
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"; // Add user_id
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"; // Add user_id
 
     // Prepare and execute the query
     $report_result = pg_query_params($conn, $report_sql, [
         $crime, $nameofvictim, $address, $contact, $witness, $witcontact,
-        $date, $time, $des, $d, '', 'Acceptable', $resident_id // Insert the user_id (resident_id)
+        $date, $time, $des, $d, '', 'Acceptable', $resident_id, $gender
     ]);
 
     if (!$report_result) {
