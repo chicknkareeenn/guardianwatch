@@ -278,7 +278,7 @@
 
                     <div class="mb-3">
                         <label for="files" class="form-label">Upload Files</label>
-                        <input type="file" class="form-control" id="files" name="files[]" multiple onchange="handleFileSelect(event)">
+                        <input type="file" class="form-control" id="files" name="files" onchange="handleFileSelect(event)">
                     </div>
 
                     <div id="fileList" class="mb-3"></div>
@@ -302,53 +302,38 @@
     let fileArray = [];
 
     function handleFileSelect(event) {
-        const fileList = document.getElementById('fileList');
-        const files = event.target.files;
+    const fileList = document.getElementById('fileList');
+    const file = event.target.files[0]; // Get the first selected file
 
-        // Update the fileArray with new files
-        for (let i = 0; i < files.length; i++) {
-            if (!fileArray.some(file => file.name === files[i].name)) {
-                fileArray.push(files[i]);
-            }
-        }
+    // Clear the file array and display the selected file
+    fileList.innerHTML = ''; // Clear any previous file list
+    if (file) {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'file-item';
 
-        // Display the files
-        fileList.innerHTML = ''; // Clear existing files
-        fileArray.forEach((file, index) => {
-            const fileDiv = document.createElement('div');
-            fileDiv.className = 'file-item';
+        const fileName = document.createElement('span');
+        fileName.textContent = file.name;
 
-            const fileName = document.createElement('span');
-            fileName.textContent = file.name;
+        const removeButton = document.createElement('button');
+        removeButton.textContent = 'Remove';
+        removeButton.type = 'button';
+        removeButton.className = 'btn btn-danger btn-sm ms-2';
+        removeButton.onclick = function () {
+            removeFile();
+        };
 
-            const removeButton = document.createElement('button');
-            removeButton.textContent = 'Remove';
-            removeButton.type = 'button';
-            removeButton.className = 'btn btn-danger btn-sm ms-2';
-            removeButton.onclick = function () {
-                removeFile(index);
-            };
+        fileDiv.appendChild(fileName);
+        fileDiv.appendChild(removeButton);
 
-            fileDiv.appendChild(fileName);
-            fileDiv.appendChild(removeButton);
-
-            fileList.appendChild(fileDiv);
-        });
+        fileList.appendChild(fileDiv);
     }
+}
 
-    function removeFile(index) {
-        // Remove file from fileArray
-        fileArray.splice(index, 1);
-
-        // Update the file input
-        const inputFile = document.getElementById('files');
-        const dt = new DataTransfer();
-        fileArray.forEach(file => dt.items.add(file));
-        inputFile.files = dt.files;
-
-        // Update displayed file list
-        handleFileSelect({ target: inputFile });
-    }
+function removeFile() {
+    // Reset the file input to allow file removal
+    document.getElementById('files').value = '';
+    document.getElementById('fileList').innerHTML = '';
+}
 </script>
 
 <script type="text/javascript">
