@@ -60,11 +60,15 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
             ];
 
             // Initialize cURL
-            $ch = curl_init($uploadUrl);
+           $ch = curl_init($uploadUrl);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);  // Force HTTP/1.1
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);  // Increase timeout
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);  // Increase connection timeout
+            curl_setopt($ch, CURLOPT_VERBOSE, true);  // Enable verbose output
 
             // Execute the request
             $response = curl_exec($ch);
