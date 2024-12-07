@@ -51,7 +51,7 @@ if ($type === 'status') {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
     }
-} elseif ($type === 'schedule') {
+} else if ($type === 'schedule') {
     // If the update type is schedule (Interview/Court Dates)
     $scheduleDetails = $data['scheduleDetails'];
     $scheduleDate = $data['scheduleDate'];
@@ -88,7 +88,7 @@ if ($type === 'status') {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
     }
-}if ($type === 'closure') {
+}else if ($type === 'closure') {
     // Closure update logic
     $closureSummary = $data['closureSummary'];
     $closureReason = $data['closureReason'];
@@ -102,7 +102,11 @@ if ($type === 'status') {
 
         // Define directory where files will be stored (directly in 'uploads/')
         $uploadDir = 'upload/';
-        $fileDest = $uploadDir . $fileName;
+
+        // Create a new unique file name based on the current timestamp and original file name
+        $newFileName = time() . '_' . $fileName;
+
+        $fileDest = $uploadDir . $newFileName;
 
         // Ensure the directory exists
         if (!is_dir($uploadDir)) {
@@ -112,7 +116,7 @@ if ($type === 'status') {
         // Move the file to the target directory
         if (move_uploaded_file($fileTmpPath, $fileDest)) {
             // File uploaded successfully
-            $uploadedFileName = $fileName; // Store the file name for the database
+            $uploadedFileName = $newFileName; // Store the new file name for the database
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Error uploading the file.']);
             exit();
