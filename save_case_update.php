@@ -107,11 +107,7 @@ if ($type === 'status') {
         $newFileName = time() . '_' . $fileName;
 
         $fileDest = $uploadDir . $newFileName;
-
-        // Ensure the directory exists
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+        
 
         // Move the file to the target directory
         if (move_uploaded_file($fileTmpPath, $fileDest)) {
@@ -174,52 +170,54 @@ if ($type === 'status') {
                 exit();
             }
             curl_close($ch);
+
+            // After successful upload to GitHub, proceed with database operations
+
+            // Fetch the necessary report data from the reports table
+            $query = "SELECT user_id, name, category, description, police_assign, file_date FROM reports WHERE id = $1";
+            $result = pg_prepare($conn, "fetch_report_data_closure", $query);
+            $result = pg_execute($conn, "fetch_report_data_closure", array($reportId));
+
+            if ($row = pg_fetch_assoc($result)) {
+                $userId = $row['user_id'];
+                $fullname = $row['name'];
+                $category = $row['category'];
+                $details = $row['description'];
+                $police = $row['police_assign'];
+                $file_date = $row['file_date'];
+
+                // Update the finish column to 'Closed' in the reports table
+                $updateQuery = "UPDATE reports SET finish = 'Closed' WHERE id = $1";
+                $updateStmt = pg_prepare($conn, "update_report_finish", $updateQuery);
+                $updateResult = pg_execute($conn, "update_report_finish", array($reportId));
+
+                if (pg_affected_rows($updateResult) > 0) {
+                    // Insert into files table with closure details and uploaded document filename
+                    $notificationMessage = "Closure summary: $closureSummary. Reasons for resolution: $closureReason.";
+                    $notificationQuery = "
+                        INSERT INTO files (reportid, user_id, fullname, notes, police, category, details, file_date, filename, time)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+                    ";
+                    $notificationStmt = pg_prepare($conn, "insert_closure_file", $notificationQuery);
+                    $notificationResult = pg_execute($conn, "insert_closure_file", array(
+                        $reportId, $userId, $fullname, $notificationMessage, $police, $category, $details, $file_date, $uploadedFileName
+                    ));
+
+                    if (pg_affected_rows($notificationResult) > 0) {
+                        echo json_encode(['status' => 'success', 'message' => 'Closure details saved, notification sent, and document uploaded.']);
+                    } else {
+                        echo json_encode(['status' => 'error', 'message' => 'Error inserting closure into files table.']);
+                    }
+                } else {
+                    echo json_encode(['status' => 'error', 'message' => 'Error updating report closure status.']);
+                }
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
+            }
         }
     } else {
         // No file uploaded, set the filename to null
         $uploadedFileName = null;
-    }
-
-    // Fetch the necessary report data from the reports table
-    $query = "SELECT user_id, name, category, description, police_assign, file_date FROM reports WHERE id = $1";
-    $result = pg_prepare($conn, "fetch_report_data_closure", $query);
-    $result = pg_execute($conn, "fetch_report_data_closure", array($reportId));
-
-    if ($row = pg_fetch_assoc($result)) {
-        $userId = $row['user_id'];
-        $fullname = $row['name'];
-        $category = $row['category'];
-        $details = $row['description'];
-        $police = $row['police_assign'];
-        $file_date = $row['file_date'];
-
-        // Update the finish column to 'Closed' in the reports table
-        $updateQuery = "UPDATE reports SET finish = 'Closed' WHERE id = $1";
-        $updateStmt = pg_prepare($conn, "update_report_finish", $updateQuery);
-        $updateResult = pg_execute($conn, "update_report_finish", array($reportId));
-
-        if (pg_affected_rows($updateResult) > 0) {
-            // Insert into files table with closure details and uploaded document filename
-            $notificationMessage = "Closure summary: $closureSummary. Reasons for resolution: $closureReason.";
-            $notificationQuery = "
-                INSERT INTO files (reportid, user_id, fullname, notes, police, category, details, file_date, filename, time)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-            ";
-            $notificationStmt = pg_prepare($conn, "insert_closure_file", $notificationQuery);
-            $notificationResult = pg_execute($conn, "insert_closure_file", array(
-                $reportId, $userId, $fullname, $notificationMessage, $police, $category, $details, $file_date, $uploadedFileName
-            ));
-
-            if (pg_affected_rows($notificationResult) > 0) {
-                echo json_encode(['status' => 'success', 'message' => 'Closure details saved, notification sent, and document uploaded.']);
-            } else {
-                echo json_encode(['status' => 'error', 'message' => 'Error inserting closure into files table.']);
-            }
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Error updating report closure status.']);
-        }
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
     }
 
 }else {
