@@ -68,19 +68,30 @@ if ($error === 0) {
 
         // Initialize cURL
         $ch = curl_init($uploadUrl);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            
+            // Execute the request
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            // Debugging
+            if ($response === false) {
+                echo "cURL error: " . curl_error($ch);
+            } else {
+                $responseData = json_decode($response, true);
+                echo "GitHub Response: " . print_r($responseData, true);
+            }
+            
+            curl_close($ch);
 
-        // Execute the request
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode == 201) {
             // File uploaded successfully to GitHub, proceed to insert into DB
+            echo "File uploaded successfully to GitHub.";
             $sql = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
             
@@ -97,6 +108,10 @@ if ($error === 0) {
             }
         } else {
             echo "Error uploading file to GitHub: $response";
+            echo "Error uploading file to GitHub. HTTP Code: $httpCode";
+            if (!empty($responseData['message'])) {
+                echo " GitHub Error Message: " . $responseData['message'];
+    }
         }
     } else {
         echo "Only PDF, DOC, and DOCX files are allowed.";
