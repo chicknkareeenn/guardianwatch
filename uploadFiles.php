@@ -11,32 +11,32 @@ $policeId = $_POST['policeId'];
 $notes = $_POST['notes'];
 
 // Check if ID is provided
-if (empty($id)) {
-    echo "<script>alert('Error: Report ID is missing.'); window.location.href='policereport.php';</script>";
-    exit();
-}
+$img_name = $_FILES['files']['name'];
+$img_size = $_FILES['files']['size'];
+$tmp_name = $_FILES['files']['tmp_name'];
+$error = $_FILES['image']['error'];
 
-if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files'
-    $file = $_FILES['files']; // Single file
-    $uploadDir = 'upload';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
+if ($error === 0) {
+    if ($img_size > 10000000000) {
+        echo "Sorry, your file is too large.";
+        exit;
+    } else {
+        $img_ex = pathinfo($img_name, PATHINFO_EXTENSION);
+        $img_ex_lc = strtolower($img_ex);
+        $allowed_exs = array("png", "jpg");
 
-    $fileName = urlencode(basename($file['name']));  // URL encode the file name
-    $fileTmpName = $file['tmp_name'];
-    $fileError = $file['error'];
+        if (in_array($img_ex_lc, $allowed_exs)) {
+            $new_img_name = time() . '_' . $img_name;
+            $local_file_path = '/tmp/' . $new_img_name;
+            move_uploaded_file($tmp_name, $local_file_path);
 
-    if ($fileError === UPLOAD_ERR_OK) {
-        $fileDest = $uploadDir . '/' . $fileName;
-        if (move_uploaded_file($fileTmpName, $fileDest)) {
-            // Upload file to GitHub after moving it locally
+            // Upload file to GitHub
             $githubRepo = "chicknkareeenn/guardianwatch"; // Replace with your GitHub username/repo
             $branch = "master"; // Branch where you want to upload
-            $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$fileName";
+            $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$new_img_name";
 
             // Read the file content
-            $content = base64_encode(file_get_contents($fileDest));
+            $content = base64_encode(file_get_contents($local_file_path));
 
             // Prepare the request body
             $data = json_encode([
@@ -47,6 +47,7 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
 
             $githubToken = getenv('GITHUB_TOKEN');  // Access your GitHub token securely
 
+            // Check if the token was retrieved successfully
             if ($githubToken === false) {
                 die("Error: GitHub token is not set in the environment variables.");
             }
@@ -64,17 +65,13 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);  // Force HTTP/1.1
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);  // Increase timeout
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);  // Increase connection timeout
-            curl_setopt($ch, CURLOPT_VERBOSE, true);  // Enable verbose output
 
             // Execute the request
             $response = curl_exec($ch);
 
             if (curl_errno($ch)) {
                 echo "cURL Error: " . curl_error($ch);
-                exit();
+                exit;
             }
 
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -84,7 +81,7 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
                 // File uploaded successfully to GitHub, proceed to insert into DB
                 $insertQuery = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
-                $params = array($id, $user_id, $name, $category, $description, $file_date, $fileName, $notes, $policeId);
+                $params = array($id, $user_id, $name, $category, $description, $file_date, $new_img_name, $notes, $policeId);
 
                 $result = pg_query_params($conn, $insertQuery, $params);
 
