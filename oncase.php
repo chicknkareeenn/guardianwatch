@@ -274,6 +274,9 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
 
       if (type === 'status') {
         dynamicFields.innerHTML = `
+          <label for="caseStatus" class="form-label">Current Status:</label>
+          <input type="text" id="caseStatus" class="form-control" value="${currentStatus}" readonly>
+          
           <label for="newStatus" class="form-label mt-2">New Status:</label>
           <select id="newStatus" class="form-control">
             <option value="Under Investigation" ${currentStatus === 'Under Investigation' ? 'selected' : ''}>Under Investigation</option>
@@ -291,14 +294,18 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
               <label for="scheduleTime" class="form-label mt-3">Select Time:</label>
               <input type="time" id="scheduleTime" class="form-control">
             `;
-          }else if (type === 'closure') {
-        dynamicFields.innerHTML = `
-          <label for="closureSummary" class="form-label">Closure Summary:</label>
-          <textarea id="closureSummary" class="form-control" rows="3" placeholder="Enter closure summary"></textarea>
-          <label for="closureReason" class="form-label mt-2">Reasons for Resolution:</label>
-          <textarea id="closureReason" class="form-control" rows="2" placeholder="Enter reasons"></textarea>
-        `;
-      } else if (type === 'followup') {
+          } else if (type === 'closure') {
+          dynamicFields.innerHTML = `
+            <label for="closureSummary" class="form-label">Closure Summary:</label>
+            <textarea id="closureSummary" class="form-control" rows="3" placeholder="Enter closure summary"></textarea>
+            <label for="closureReason" class="form-label mt-2">Reasons for Resolution:</label>
+            <textarea id="closureReason" class="form-control" rows="2" placeholder="Enter reasons"></textarea>
+
+            <!-- File Upload for Court Decision Letter -->
+            <label for="courtDecisionLetter" class="form-label mt-3">Upload Court Decision Letter:</label>
+            <input type="file" id="courtDecisionLetter" class="form-control" accept=".pdf,.doc,.docx,.jpg,.png" required />
+          `;
+        } else if (type === 'followup') {
         dynamicFields.innerHTML = `
           <label for="followUpDetails" class="form-label">Follow-Up Requirements:</label>
           <textarea id="followUpDetails" class="form-control" rows="3" placeholder="Enter follow-up requirements"></textarea>
@@ -313,20 +320,34 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
 
       // Collect data based on selected type
       let data = { reportId, type };
+      let isFileRequired = false;
       if (type === 'status') {
         data.status = document.getElementById('newStatus').value;
       } else if (type === 'schedule') {
         data.scheduleDetails = document.getElementById('scheduleDetails').value;
         data.scheduleDate = document.getElementById('scheduleDate').value;
         data.scheduleTime = document.getElementById('scheduleTime').value;
-    }  else if (type === 'closure') {
-        data.closureSummary = document.getElementById('closureSummary').value;
-        data.closureReason = document.getElementById('closureReason').value;
-      } else if (type === 'followup') {
+      }else if (type === 'closure') {
+      data.closureSummary = document.getElementById('closureSummary').value;
+      data.closureReason = document.getElementById('closureReason').value;
+      
+      const fileInput = document.getElementById('courtDecisionLetter');
+      if (!fileInput.files.length) {
+        isFileRequired = true; // Set flag to show file upload notification
+      } else {
+        data.file = fileInput.files[0]; // Include the file in the data
+      }
+    } else if (type === 'followup') {
         data.followUpDetails = document.getElementById('followUpDetails').value;
       } else if (type === 'feedback') {
         data.feedbackPrompt = document.getElementById('feedbackPrompt').value;
       }
+    
+    if (isFileRequired) {
+      alert('Please upload the court decision letter before saving the case closure update.');
+      return; // Prevent form submission
+    }
+      
 
       // Send AJAX request to save update
       const xhr = new XMLHttpRequest();
