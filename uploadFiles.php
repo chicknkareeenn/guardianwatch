@@ -22,7 +22,7 @@ $notes = $_POST['notes'];
 // Check for files and upload them
 if (isset($_FILES['files'])) {
     $fileArray = $_FILES['files'];
-    $uploadDir = 'uploads/'; // Upload directory on your server
+    $uploadDir = 'upload/'; // Upload directory on your server
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true); // Create directory if not exists
     }
@@ -38,7 +38,7 @@ if (isset($_FILES['files'])) {
                 // Upload file to GitHub
                 $githubRepo = "chicknkareeenn/guardianwatch"; // Your GitHub repo
                 $branch = "master"; // Branch to upload to
-                $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/uploads/$fileName"; // Correct path in GitHub
+                $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$fileName"; // Correct path in GitHub
 
                 // Read file content and encode in base64
                 $content = base64_encode(file_get_contents($fileDest));
