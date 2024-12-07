@@ -20,7 +20,7 @@ if (empty($id)) {
 
 if (isset($_FILES['files'])) {
     $fileArray = $_FILES['files'];
-    $uploadDir = 'uploads/';
+    $uploadDir = 'upload/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
@@ -33,14 +33,67 @@ if (isset($_FILES['files'])) {
         if ($fileError === UPLOAD_ERR_OK) {
             $fileDest = $uploadDir . $fileName;
             if (move_uploaded_file($fileTmpName, $fileDest)) {
-                $insertQuery = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
-                $params = array($id, $user_id, $name, $category, $description, $file_date, $fileName, $notes, $policeId);
+                // Upload file to GitHub after moving it locally
+                $githubRepo = "chicknkareeenn/guardianwatch"; // Replace with your GitHub username/repo
+                $branch = "master"; // Branch where you want to upload
+                $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$fileName";
 
-                $result = pg_query_params($conn, $insertQuery, $params);
+                // Read the file content
+                $content = base64_encode(file_get_contents($fileDest));
 
-                if (!$result) {
-                    echo "<script>alert('Error inserting file info into database: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
+                // Prepare the request body
+                $data = json_encode([
+                    "message" => "Adding a new file to upload folder",
+                    "content" => $content,
+                    "branch" => $branch
+                ]);
+
+                $githubToken = getenv('GITHUB_TOKEN');  // Access your GitHub token securely
+
+                // Check if the token was retrieved successfully
+                if ($githubToken === false) {
+                    die("Error: GitHub token is not set in the environment variables.");
+                }
+
+                // Prepare the headers
+                $headers = [
+                    "Authorization: token $githubToken",
+                    "Content-Type: application/json",
+                    "User-Agent: GuardianWatchApp"
+                ];
+
+                // Initialize cURL
+                $ch = curl_init($uploadUrl);
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+                // Execute the request
+                $response = curl_exec($ch);
+
+                if (curl_errno($ch)) {
+                    echo "cURL Error: " . curl_error($ch);
+                    exit();
+                }
+
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode == 201) {
+                    // File uploaded successfully to GitHub, proceed to insert into DB
+                    $insertQuery = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
+                    $params = array($id, $user_id, $name, $category, $description, $file_date, $fileName, $notes, $policeId);
+
+                    $result = pg_query_params($conn, $insertQuery, $params);
+
+                    if (!$result) {
+                        echo "<script>alert('Error inserting file info into database: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
+                        exit();
+                    }
+                } else {
+                    echo "Error uploading file to GitHub: $response";
                     exit();
                 }
             } else {
