@@ -20,7 +20,9 @@ $error = $_FILES['files']['error'];
 
 if ($error === 0) {
     if ($file_size > 10000000) { // 10 MB limit
-        echo "Sorry, your file is too large.";
+        $error_message = "Sorry, your file is too large.";
+        $color = "error";
+        header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
         exit();
     }
 
@@ -33,7 +35,9 @@ if ($error === 0) {
         $local_file_path = '/tmp/' . $new_file_name;
 
         if (!move_uploaded_file($tmp_name, $local_file_path)) {
-            echo "Failed to move uploaded file.";
+            $error_message = "Failed to move uploaded file.";
+            $color = "error";
+            header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
             exit();
         }
 
@@ -55,7 +59,9 @@ if ($error === 0) {
         $githubToken = getenv('GITHUB_TOKEN'); // GitHub token stored in environment variables
 
         if (!$githubToken) {
-            echo "Error: GitHub token is not set in the environment variables.";
+            $error_message = "Error: GitHub token is not set in the environment variables.";
+            $color = "error";
+            header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
             exit();
         }
 
@@ -68,63 +74,73 @@ if ($error === 0) {
 
         // Initialize cURL
         $ch = curl_init($uploadUrl);
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            
-            // Execute the request
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            
-            // Debugging
-            if ($response === false) {
-                echo "cURL error: " . curl_error($ch);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // Execute the request
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // Handle cURL errors
+        if ($response === false) {
+            $error_message = "cURL error: " . curl_error($ch);
+            $color = "error";
+            header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
+            exit();
+        } else {
+            $responseData = json_decode($response, true);
+            if ($httpCode == 201) {
+                // File uploaded successfully to GitHub, proceed to insert into DB
+                $sql = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
+                
+                $stmt = pg_prepare($conn, "insert_files", $sql);
+                $result = pg_execute($conn, "insert_files", array($id, $user_id, $name, $category, $description, $file_date, $new_file_name, $notes, $policeId));
+
+                if ($result) {
+                    // Update the report status to 'Ongoing'
+                    $updateQuery = "UPDATE reports SET finish = 'Ongoing' WHERE id = $1";
+                    $updateResult = pg_query_params($conn, $updateQuery, array($id));
+
+                    if (!$updateResult) {
+                        $error_message = "Error updating report status: " . pg_last_error($conn);
+                        $color = "error";
+                        header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
+                        exit();
+                    }
+
+                    $error_message = "Report is now Ongoing.";
+                    $color = "success";
+                    header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
+                    exit();
+                } else {
+                    $error_message = "Error: Could not execute the query.";
+                    $color = "error";
+                    header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
+                    exit();
+                }
             } else {
-                $responseData = json_decode($response, true);
-                echo "GitHub Response: " . print_r($responseData, true);
-            }
-            
-            curl_close($ch);
-
-
-        if ($httpCode == 201) {
-            // File uploaded successfully to GitHub, proceed to insert into DB
-            echo "File uploaded successfully to GitHub.";
-            $sql = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
-            
-            $stmt = pg_prepare($conn, "insert_files", $sql);
-            $result = pg_execute($conn, "insert_files", array($id, $user_id, $name, $category, $description, $file_date, $new_file_name, $notes, $policeId));
-
-            if ($result) {
-                $error_message = "Report is now Ongoing.";
-                $color = "p";
+                $error_message = "Error uploading file to GitHub: $response";
+                $color = "error";
                 header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
                 exit();
-            } else {
-                echo "Error: Could not execute the query.";
             }
-        } else {
-            echo "Error uploading file to GitHub: $response";
-            echo "Error uploading file to GitHub. HTTP Code: $httpCode";
-            if (!empty($responseData['message'])) {
-                echo " GitHub Error Message: " . $responseData['message'];
-    }
         }
+        
+        curl_close($ch);
     } else {
-        echo "Only PDF, DOC, and DOCX files are allowed.";
+        $error_message = "Only PDF, DOC, and DOCX files are allowed.";
+        $color = "error";
+        header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
+        exit();
     }
 } else {
-    echo "An unknown error occurred during file upload.";
-}
-// Update the report status to 'Ongoing'
-$updateQuery = "UPDATE reports SET finish = 'Ongoing' WHERE id = $1";
-$updateResult = pg_query_params($conn, $updateQuery, array($id));
-
-if (!$updateResult) {
-    echo "<script>alert('Error updating report status: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
+    $error_message = "An unknown error occurred during file upload.";
+    $color = "error";
+    header("Location: policereport.php?error_message=" . urlencode($error_message) . "&color=" . $color);
     exit();
 }
 ?>
