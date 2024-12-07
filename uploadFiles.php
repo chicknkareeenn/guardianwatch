@@ -14,7 +14,7 @@ $notes = $_POST['notes'];
 $img_name = $_FILES['files']['name'];
 $img_size = $_FILES['files']['size'];
 $tmp_name = $_FILES['files']['tmp_name'];
-$error = $_FILES['image']['error'];
+$error = $_FILES['files']['error'];  // Changed from 'image' to 'files'
 
 if ($error === 0) {
     if ($img_size > 10000000000) {
@@ -94,13 +94,13 @@ if ($error === 0) {
                 exit();
             }
         } else {
-            echo "<script>alert('Error moving file: $fileName'); window.location.href='policereport.php';</script>";
+            echo "<script>alert('Only PNG and JPG images are allowed.'); window.location.href='policereport.php';</script>";
             exit();
         }
-    } else {
-        echo "<script>alert('Error uploading file: $fileName'); window.location.href='policereport.php';</script>";
-        exit();
     }
+} else {
+    echo "<script>alert('Error uploading file.'); window.location.href='policereport.php';</script>";
+    exit();
 }
 
 // Update the report status
