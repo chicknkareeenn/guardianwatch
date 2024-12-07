@@ -23,12 +23,12 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
         mkdir($uploadDir, 0755, true);
     }
 
-    $fileName = basename($file['name']);
+    $fileName = urlencode(basename($file['name']));  // URL encode the file name
     $fileTmpName = $file['tmp_name'];
     $fileError = $file['error'];
 
     if ($fileError === UPLOAD_ERR_OK) {
-        $fileDest = $uploadDir . $fileName;
+        $fileDest = $uploadDir . '/' . $fileName;
         if (move_uploaded_file($fileTmpName, $fileDest)) {
             // Upload file to GitHub after moving it locally
             $githubRepo = "chicknkareeenn/guardianwatch"; // Replace with your GitHub username/repo
@@ -47,7 +47,6 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
 
             $githubToken = getenv('GITHUB_TOKEN');  // Access your GitHub token securely
 
-            // Check if the token was retrieved successfully
             if ($githubToken === false) {
                 die("Error: GitHub token is not set in the environment variables.");
             }
@@ -60,7 +59,7 @@ if (isset($_FILES['files'])) { // Change to single file 'file' instead of 'files
             ];
 
             // Initialize cURL
-           $ch = curl_init($uploadUrl);
+            $ch = curl_init($uploadUrl);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
