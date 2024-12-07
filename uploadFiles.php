@@ -109,4 +109,13 @@ if (isset($_FILES['files'])) {
         }
     }
 }
+$updateQuery = "UPDATE reports SET finish = 'Ongoing' WHERE id = $1";
+$updateResult = pg_query_params($conn, $updateQuery, array($id));
+
+if ($updateResult) {
+    echo "<script>alert('File uploaded, info saved, and report status updated to Ongoing successfully.'); window.location.href='policereport.php';</script>";
+} else {
+    echo "<script>alert('Error updating report status: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
+    exit();
+}
 ?>
