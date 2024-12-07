@@ -1,7 +1,6 @@
 <?php
 include "dbcon.php"; // PostgreSQL connection (pg_connect)
 
-set_time_limit(10); // Set a maximum execution time to avoid indefinite loading
 
 $id = $_POST['id'];
 $user_id = $_POST['user_id'];
@@ -20,7 +19,7 @@ if (empty($id)) {
 
 if (isset($_FILES['files'])) {
     $fileArray = $_FILES['files'];
-    $uploadDir = 'upload/s';
+    $uploadDir = 'upload';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
