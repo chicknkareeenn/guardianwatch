@@ -20,7 +20,7 @@ if (empty($id)) {
 
 if (isset($_FILES['files'])) {
     $fileArray = $_FILES['files'];
-    $uploadDir = 'upload/';
+    $uploadDir = 'upload/s';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
