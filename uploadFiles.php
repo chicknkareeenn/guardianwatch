@@ -1,5 +1,7 @@
 <?php
-include "dbcon.php"; // PostgreSQL connection (pg_connect)
+session_start();
+
+include "dbcon.php"; // Database connection
 
 $id = $_POST['id'];
 $user_id = $_POST['user_id'];
@@ -10,11 +12,20 @@ $file_date = $_POST['file_date'];
 $policeId = $_POST['policeId'];
 $notes = $_POST['notes'];
 
-// Check if ID is provided
+// Update the report status to 'Ongoing'
+$updateQuery = "UPDATE reports SET finish = 'Ongoing' WHERE id = $1";
+$updateResult = pg_query_params($conn, $updateQuery, array($id));
+
+if (!$updateResult) {
+    echo "<script>alert('Error updating report status: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
+    exit();
+}
+
+// Validate and upload the image
 $img_name = $_FILES['files']['name'];
 $img_size = $_FILES['files']['size'];
 $tmp_name = $_FILES['files']['tmp_name'];
-$error = $_FILES['files']['error'];  // Changed from 'image' to 'files'
+$error = $_FILES['files']['error'];
 
 if ($error === 0) {
     if ($img_size > 10000000000) {
@@ -71,7 +82,7 @@ if ($error === 0) {
 
             if (curl_errno($ch)) {
                 echo "cURL Error: " . curl_error($ch);
-                exit;
+                exit();
             }
 
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -79,38 +90,27 @@ if ($error === 0) {
 
             if ($httpCode == 201) {
                 // File uploaded successfully to GitHub, proceed to insert into DB
-                $insertQuery = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
+                $sql = "INSERT INTO files (reportid, user_id, fullname, category, details, file_date, filename, notes, police) 
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
-                $params = array($id, $user_id, $name, $category, $description, $file_date, $new_img_name, $notes, $policeId);
 
-                $result = pg_query_params($conn, $insertQuery, $params);
+                $stmt = pg_prepare($conn, "insert_files", $sql);
+                $result = pg_execute($conn, "insert_files", array($id, $user_id, $name, $category, $description, $file_date, $new_img_name, $notes, $policeId));
 
-                if (!$result) {
-                    echo "<script>alert('Error inserting file info into database: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
-                    exit();
+                if ($result) {
+                    $error_message = "Report is now Ongoing.";
+                    $color = "p";
+                    header("Location: policereport.php?error_message=" . $error_message . "&color=" . $color);
+                } else {
+                    echo "Error: Could not execute the query.";
                 }
             } else {
                 echo "Error uploading file to GitHub: $response";
-                exit();
             }
         } else {
-            echo "<script>alert('Only PNG and JPG images are allowed.'); window.location.href='policereport.php';</script>";
-            exit();
+            echo "Only PNG and JPG images are allowed.";
         }
     }
 } else {
-    echo "<script>alert('Error uploading file.'); window.location.href='policereport.php';</script>";
-    exit();
-}
-
-// Update the report status
-$updateQuery = "UPDATE reports SET finish = 'Ongoing' WHERE id = $1";
-$updateResult = pg_query_params($conn, $updateQuery, array($id));
-
-if ($updateResult) {
-    echo "<script>alert('File uploaded, info saved, and report status updated to Ongoing successfully.'); window.location.href='policereport.php';</script>";
-} else {
-    echo "<script>alert('Error updating report status: " . pg_last_error($conn) . "'); window.location.href='policereport.php';</script>";
-    exit();
+    echo "An unknown error occurred!";
 }
 ?>
