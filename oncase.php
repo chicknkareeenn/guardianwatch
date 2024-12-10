@@ -328,15 +328,24 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
         data.scheduleDate = document.getElementById('scheduleDate').value;
         data.scheduleTime = document.getElementById('scheduleTime').value;
       }else if (type === 'closure') {
-      data.closureSummary = document.getElementById('closureSummary').value;
-      data.closureReason = document.getElementById('closureReason').value;
-      
-      const fileInput = document.getElementById('courtDecisionLetter');
-      if (!fileInput.files.length) {
-        isFileRequired = true; // Set flag to show file upload notification
-      } else {
-        data.file = fileInput.files[0]; // Include the file in the data
-      }
+        data.closureSummary = document.getElementById('closureSummary').value;
+        data.closureReason = document.getElementById('closureReason').value;
+        
+        const fileInput = document.getElementById('courtDecisionLetter');
+        if (!fileInput.files.length) {
+            isFileRequired = true; // Set flag to show file upload notification
+        } else {
+            const file = fileInput.files[0];
+            
+            // Create FileReader to read the file as base64
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                data.file = reader.result.split(',')[1]; // Extract base64 string
+                sendDataToServer(data);
+            };
+            reader.readAsDataURL(file); // Read the file as base64
+            return; // Prevent form submission until file is read
+        }
     } else if (type === 'followup') {
         data.followUpDetails = document.getElementById('followUpDetails').value;
       } else if (type === 'feedback') {
@@ -347,21 +356,24 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
       alert('Please upload the court decision letter before saving the case closure update.');
       return; // Prevent form submission
     }
+
+    sendDataToServer(data);
       
 
-      // Send AJAX request to save update
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'save_case_update.php', true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.onreadystatechange = () => {
+     function sendDataToServer(data) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'save_case_update.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-          alert('Update saved successfully!');
-          location.reload(); // Reload to show the updated data
+            alert('Update saved successfully!');
+            location.reload();
         }
-      };
-      xhr.send(JSON.stringify(data));
-    });
+    };
+    xhr.send(JSON.stringify(data)); // Send as JSON
+}
   });
+});
 </script>
 
 
