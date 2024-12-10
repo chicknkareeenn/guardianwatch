@@ -89,93 +89,80 @@ if ($type === 'status') {
         echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
     }
 }elseif ($type === 'closure') {
-    // Closure update logic
     $closureSummary = $data['closureSummary'];
     $closureReason = $data['closureReason'];
 
     // Handle file upload from base64
     if (isset($data['file'])) {
-        // Decode the base64 string (removing the prefix)
+        // Decode the base64 string
         $fileData = base64_decode($data['file']);
-        
-        // Generate a unique filename for the uploaded file
-        $fileName = 'court_decision_' . uniqid() . '.pdf'; // Change extension based on file type if needed
-        
-        // Define the directory where files will be stored
+        $fileName = 'court_decision_' . uniqid() . '.pdf';
         $uploadDir = 'upload/';
         $fileDest = $uploadDir . $fileName;
 
-        // Ensure the directory exists
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
 
-        // Save the decoded file to the server
         if (file_put_contents($fileDest, $fileData)) {
-            // File uploaded successfully
-            $uploadedFileName = $fileName; // Store the file name for GitHub and database purposes
+            $uploadedFileName = $fileName; 
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Error uploading the file.']);
             exit();
         }
 
-        // Upload the file to GitHub after saving it locally
-        $githubRepo = "chicknkareeenn/guardianwatch"; // Your GitHub username/repo
-        $branch = "master"; // Branch where you want to upload
-        $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$uploadedFileName"; // The GitHub API URL for file upload
+        // Upload to GitHub
+        $githubRepo = "chicknkareeenn/guardianwatch"; 
+        $branch = "master";
+        $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$uploadedFileName";
 
-        // Read the file content
         $content = base64_encode(file_get_contents($fileDest));
-
-        // Prepare the request body
         $data = json_encode([
             "message" => "Adding a new file to upload folder",
             "content" => $content,
             "branch" => $branch
         ]);
 
-        $githubToken = getenv('GITHUB_TOKEN'); // GitHub token stored in environment variables
-
+        $githubToken = getenv('GITHUB_TOKEN');
         if (!$githubToken) {
-            echo json_encode(['status' => 'error', 'message' => 'Error: GitHub token is not set in the environment variables.']);
+            echo json_encode(['status' => 'error', 'message' => 'GitHub token is missing.']);
             exit();
         }
 
-        // Prepare the headers
         $headers = [
             "Authorization: token $githubToken",
             "Content-Type: application/json",
             "User-Agent: GuardianWatchApp"
         ];
 
-        // Initialize cURL to upload the file to GitHub
         $ch = curl_init($uploadUrl);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-        // Execute the request
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        // Handle cURL errors
         if ($response === false) {
             echo json_encode(['status' => 'error', 'message' => 'cURL error: ' . curl_error($ch)]);
             exit();
         }
 
-        // Check the response code and handle success or failure
         if ($httpCode == 201) {
             $responseData = json_decode($response, true);
 
-            // File successfully uploaded to GitHub, proceed with database operations
+            // Fetch report details from the database
             $query = "SELECT user_id, name, category, description, police_assign, file_date FROM reports WHERE id = $1";
             $result = pg_prepare($conn, "fetch_report_data_closure", $query);
+            if (!$result) {
+                echo json_encode(['status' => 'error', 'message' => 'Failed to prepare query.']);
+                exit();
+            }
             $result = pg_execute($conn, "fetch_report_data_closure", array($reportId));
 
             if ($row = pg_fetch_assoc($result)) {
+                // Proceed with updating the report status and inserting file details
                 $userId = $row['user_id'];
                 $fullname = $row['name'];
                 $category = $row['category'];
@@ -183,13 +170,12 @@ if ($type === 'status') {
                 $police = $row['police_assign'];
                 $file_date = $row['file_date'];
 
-                // Update the finish column to 'Closed' in the reports table
                 $updateQuery = "UPDATE reports SET finish = 'Closed' WHERE id = $1";
                 $updateStmt = pg_prepare($conn, "update_report_finish", $updateQuery);
                 $updateResult = pg_execute($conn, "update_report_finish", array($reportId));
 
                 if (pg_affected_rows($updateResult) > 0) {
-                    // Insert into files table with closure details and uploaded document filename
+                    // Insert closure into files table
                     $notificationMessage = "Closure summary: $closureSummary. Reasons for resolution: $closureReason.";
                     $notificationQuery = "
                         INSERT INTO files (reportid, user_id, fullname, notes, police, category, details, file_date, filename, time)
@@ -206,22 +192,17 @@ if ($type === 'status') {
                         echo json_encode(['status' => 'error', 'message' => 'Error inserting closure into files table.']);
                     }
                 } else {
-                    echo json_encode(['status' => 'error', 'message' => 'Error updating report closure status.']);
+                    echo json_encode(['status' => 'error', 'message' => 'Failed to update the report status.']);
                 }
             } else {
-                echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
+                echo json_encode(['status' => 'error', 'message' => 'Failed to fetch report data.']);
             }
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Error uploading file to GitHub: ' . $response]);
+            echo json_encode(['status' => 'error', 'message' => 'GitHub upload failed with HTTP code: ' . $httpCode]);
         }
 
         curl_close($ch);
-    } else {
-        // No file uploaded, set the filename to null and proceed with other logic
-        $uploadedFileName = null;
     }
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid update type.']);
 }
 
 ?>
