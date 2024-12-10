@@ -502,6 +502,12 @@ function callmodal1(reportId, category) {
     var myModal = new bootstrap.Modal(document.getElementById('asign'));
     myModal.show();
 }
+function callmodal(id){
+document.getElementById("arrid").value = id;
+    console.log(id);
+    var myModal = new bootstrap.Modal(document.getElementById('arr'));
+    myModal.show();
+  }
 
 function fetchPoliceByCategory(category) {
     const policeSelect = document.getElementById("police-select");
