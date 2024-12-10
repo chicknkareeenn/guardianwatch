@@ -83,7 +83,51 @@ if ($result_emergency) {
     }
 }
 
-pg_close($conn);
+$male_query = "SELECT COUNT(*) as male_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year and gender = 'Male'";
+$female_query = "SELECT COUNT(*) as female_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year and gender = 'Female'";
+
+$male_result = pg_query($conn, $male_query);
+$female_result = pg_query($conn, $female_query);
+
+if (!$male_result || !$female_result) {
+    die("Error in query execution: " . pg_last_error());
+}
+
+$male_reports_count = pg_fetch_result($male_result, 0, 'male_count');
+$female_reports_count = pg_fetch_result($female_result, 0, 'female_count');
+
+
+?>
+<?php
+// Query to get the most reported crime category
+$brgyquery = "SELECT category, COUNT(*) AS category_count
+          FROM reports
+          WHERE EXTRACT(YEAR FROM file_date) = $selected_year
+          GROUP BY category
+          ORDER BY category_count DESC
+          LIMIT 1"; // Fetches the most reported category
+$result = pg_query($conn, $brgyquery);
+
+// Get the category with the highest count
+$most_reported_category = pg_fetch_assoc($result)['category'];
+
+// Query to get the distribution of the most reported category by barangay
+$query_barangay = "SELECT address, COUNT(*) AS count
+                   FROM reports
+                   WHERE category = '$most_reported_category' and EXTRACT(YEAR FROM file_date) = $selected_year
+                   GROUP BY address
+                   ORDER BY count DESC
+                   LIMIT 5";
+$result_barangay = pg_query($conn, $query_barangay);
+
+// Prepare the data for the Donut Chart
+$barangay_data = [];
+while ($row = pg_fetch_assoc($result_barangay)) {
+    $barangay_data[] = ['address' => $row['address'], 'count' => $row['count']];
+}
+
+// Encode data to be used in JavaScript
+$barangay_json = json_encode($barangay_data);
 ?>
 
 
@@ -273,42 +317,26 @@ pg_close($conn);
             </a>
           </div>
           <div class="col-xxl-3 col-md-6">
-            <a href="adminoncase.php">
-              <div class="card info-card sales-card">
-                <div class="card-body">
-                  <h5 class="card-title">Ongoing Cases</h5>
-                  <div class="d-flex align-items-center">
-                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-                    <i class="bi bi-hourglass-split" style="color: #184965;"></i>
-                    </div>
-                    <div class="ps-3">
-                      <h6><?php echo $ongoing_count; ?></h6>
-                    </div>
-                  </div>
+            <div class="card info-card sales-card">
+              <div class="card-body">
+                <h5 class="card-title" style="font-size: 14px;">Gender Distribution of Reports</h5>
+                <div class="d-flex align-items-center justify-content-center" style="margin-top: -20px;">
+                  <canvas id="genderPieChart" style="max-width: 180px; max-height: 89px;"></canvas>
                 </div>
               </div>
-            </a>
+            </div>
           </div>
           <!-- Emergency Card -->
           <div class="col-xxl-3 col-md-6">
-            <a href="mapss.php">
-              <div class="card info-card">
+            <div class="card info-card sales-card">
                 <div class="card-body">
-                  <h5 class="card-title">Emergency</h5>
-                  <div class="d-flex align-items-center">
-                    <div class="card-icon rounded-circle d-flex align-items-center justify-content-center" style="background-color:#C9FBFF;">
-                      <i class="bi bi-exclamation-triangle"></i>
+                    <h5 class="card-title" style="font-size: 14px;">Most Reported Crime: <?php echo $most_reported_category; ?></h5>
+                    <div class="d-flex align-items-center justify-content-center" style="margin-top: -20px;">
+                        <canvas id="categoryDonutChart" style="max-width: 180px; max-height: 89px;"></canvas>
                     </div>
-                    <div class="ps-3">
-                    <h6><?php echo $ongoing_count; ?></h6>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            </a>
-          </div>
+            </div>
         </div>
-      </div>
     </section>
 
     <section class="section dashboard">
@@ -614,6 +642,39 @@ const borderColors = [
     }
 });
 
+document.addEventListener('DOMContentLoaded', function () {
+  const ctx = document.getElementById('genderPieChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Male', 'Female'],
+      datasets: [{
+        data: [
+          <?php echo $male_reports_count; ?>,
+          <?php echo $female_reports_count; ?>
+        ],
+        backgroundColor: ['#184965', '#FFD700'],
+        borderColor: ['#FFFFFF', '#FFFFFF'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: 'right', // Moves legend to the right side
+          labels: {
+            boxWidth: 10, // Adjust width of the color box
+            boxHeight: 10, // Adjust height of the color box
+            font: {
+              size: 10 // Adjust font size for better fit
+            }
+          }
+        }
+      },
+      responsive: true,
+    }
+  });
+});
   </script>
 
 <script>
@@ -637,6 +698,48 @@ setInterval(updateClock, 1000);
 // Initial call to display immediately on load
 updateClock();
 
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Get the barangay distribution data passed from PHP
+    const barangayData = <?php echo $barangay_json; ?>;
+    
+    // Extract the barangay names (addresses) and counts for the Donut chart
+    const labels = barangayData.map(data => data.address);  // Get addresses (barangays)
+    const data = barangayData.map(data => data.count);      // Get counts of reports
+
+    const ctx = document.getElementById('categoryDonutChart').getContext('2d');
+    
+    // Create the Donut Chart
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: ['#FF5733', '#33FF57', '#FFD700', '#184965', '#33B5FF'], // Dynamic colors for each barangay
+                borderColor: ['#fff', '#fff', '#fff', '#fff', '#fff'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                    boxWidth: 10, // Adjust width of the color box
+                    boxHeight: 10, // Adjust height of the color box
+                    font: {
+                      size: 10 // Adjust font size for better fit
+                    }
+                  }
+                }
+            }
+        }
+    });
+});
 </script>
 
 
