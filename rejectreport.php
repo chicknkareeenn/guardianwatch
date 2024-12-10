@@ -7,7 +7,7 @@ $re = $_POST['reason'];
 $id = $_POST['id'];
 
 // Create the PostgreSQL query
-$sql = "UPDATE reports SET reason = $1, finish = 'Reject' WHERE id = $2";
+$sql = "UPDATE reports SET reason = $1, finish = 'Rejected' WHERE id = $2";
 
 // Prepare the query
 $result = pg_query_params($conn, $sql, array($re, $id));
