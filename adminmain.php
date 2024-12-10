@@ -330,7 +330,7 @@ $barangay_json = json_encode($barangay_data);
           <div class="col-xxl-3 col-md-6">
             <div class="card info-card sales-card">
                 <div class="card-body">
-                    <h5 class="card-title" style="font-size: 14px;">Most Reported Crime: <?php echo $most_reported_category; ?></h5>
+                    <h5 class="card-title" style="font-size: 14px;">Top Crime: <?php echo $most_reported_category; ?></h5>
                     <div class="d-flex align-items-center justify-content-center" style="margin-top: -20px;">
                         <canvas id="categoryDonutChart" style="max-width: 180px; max-height: 89px;"></canvas>
                     </div>
