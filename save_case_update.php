@@ -118,12 +118,85 @@ if ($type === 'status') {
             echo json_encode(['status' => 'error', 'message' => 'Error uploading the file.']);
             exit();
         }
+
+        // Upload the file to GitHub after saving it locally
+        $githubRepo = "chicknkareeenn/guardianwatch"; // Your GitHub username/repo
+        $branch = "master"; // Branch where you want to upload
+        $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$uploadedFileName"; // The GitHub API URL for file upload
+
+        // Read the file content
+        $content = base64_encode(file_get_contents($fileDest));
+
+        // Prepare the request body
+        $data = json_encode([
+            "message" => "Adding a new file to upload folder",
+            "content" => $content,
+            "branch" => $branch
+        ]);
+
+        $githubToken = getenv('GITHUB_TOKEN'); // GitHub token stored in environment variables
+
+        if (!$githubToken) {
+            echo json_encode(['status' => 'error', 'message' => 'Error: GitHub token is not set in the environment variables.']);
+            exit();
+        }
+
+        // Prepare the headers
+        $headers = [
+            "Authorization: token $githubToken",
+            "Content-Type: application/json",
+            "User-Agent: GuardianWatchApp"
+        ];
+
+        // Initialize cURL to upload the file to GitHub
+        $ch = curl_init($uploadUrl);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // Execute the request
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // Handle cURL errors
+        if ($response === false) {
+            echo json_encode(['status' => 'error', 'message' => 'cURL error: ' . curl_error($ch)]);
+            exit();
+        }
+
+        // Check the response code and handle success or failure
+        if ($httpCode == 201) {
+            $responseData = json_decode($response, true);
+
+            // Insert file details into the database
+            $query = "
+                INSERT INTO files (reportid, user_id, fullname, notes, police, category, details, file_date, filename, time)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            ";
+            $stmt = pg_prepare($conn, "insert_closure_file", $query);
+            $notificationResult = pg_execute($conn, "insert_closure_file", array(
+                $reportId, $userId, $fullname, "Closure summary: $closureSummary. Reasons for resolution: $closureReason.", 
+                $police, $category, $details, $file_date, $uploadedFileName
+            ));
+
+            if (pg_affected_rows($notificationResult) > 0) {
+                echo json_encode(['status' => 'success', 'message' => 'Closure details saved, document uploaded, and file added to GitHub.']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Error inserting closure into files table.']);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Error uploading file to GitHub: ' . $response]);
+        }
+
+        curl_close($ch);
     } else {
         // No file uploaded, set the filename to null
         $uploadedFileName = null;
     }
 
-    // Fetch the necessary report data from the reports table
+    // Continue with the report update logic
     $query = "SELECT user_id, name, category, description, police_assign, file_date FROM reports WHERE id = $1";
     $result = pg_prepare($conn, "fetch_report_data_closure", $query);
     $result = pg_execute($conn, "fetch_report_data_closure", array($reportId));
@@ -142,22 +215,7 @@ if ($type === 'status') {
         $updateResult = pg_execute($conn, "update_report_finish", array($reportId));
 
         if (pg_affected_rows($updateResult) > 0) {
-            // Insert into files table with closure details and uploaded document filename
-            $notificationMessage = "Closure summary: $closureSummary. Reasons for resolution: $closureReason.";
-            $notificationQuery = "
-                INSERT INTO files (reportid, user_id, fullname, notes, police, category, details, file_date, filename, time)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-            ";
-            $notificationStmt = pg_prepare($conn, "insert_closure_file", $notificationQuery);
-            $notificationResult = pg_execute($conn, "insert_closure_file", array(
-                $reportId, $userId, $fullname, $notificationMessage, $police, $category, $details, $file_date, $uploadedFileName
-            ));
-
-            if (pg_affected_rows($notificationResult) > 0) {
-                echo json_encode(['status' => 'success', 'message' => 'Closure details saved and notification sent, document uploaded.']);
-            } else {
-                echo json_encode(['status' => 'error', 'message' => 'Error inserting closure into files table.']);
-            }
+            // Handle success message if file and database update are successful
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Error updating report closure status.']);
         }
@@ -167,4 +225,5 @@ if ($type === 'status') {
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Invalid update type.']);
 }
+
 ?>
