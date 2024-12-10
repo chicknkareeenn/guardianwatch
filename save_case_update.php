@@ -113,7 +113,7 @@ if ($type === 'status') {
 
         // Upload to GitHub
         $githubRepo = "chicknkareeenn/guardianwatch"; 
-        $branch = "master";
+        $branch = "master"; // Update if necessary
         $uploadUrl = "https://api.github.com/repos/$githubRepo/contents/upload/$uploadedFileName";
 
         $content = base64_encode(file_get_contents($fileDest));
@@ -140,6 +140,7 @@ if ($type === 'status') {
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_VERBOSE, true); // For debugging purposes
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -149,9 +150,9 @@ if ($type === 'status') {
             exit();
         }
 
+        // Debugging the response
+        $responseData = json_decode($response, true);
         if ($httpCode == 201) {
-            $responseData = json_decode($response, true);
-
             // Fetch report details from the database
             $query = "SELECT user_id, name, category, description, police_assign, file_date FROM reports WHERE id = $1";
             $result = pg_prepare($conn, "fetch_report_data_closure", $query);
@@ -198,7 +199,7 @@ if ($type === 'status') {
                 echo json_encode(['status' => 'error', 'message' => 'Failed to fetch report data.']);
             }
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'GitHub upload failed with HTTP code: ' . $httpCode]);
+            echo json_encode(['status' => 'error', 'message' => 'GitHub upload failed with HTTP code: ' . $httpCode, 'response' => $responseData]);
         }
 
         curl_close($ch);
