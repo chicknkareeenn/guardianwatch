@@ -105,7 +105,7 @@
                         <th scope="col">User</th>
                         <th scope="col">Case</th>
                         <th scope="col">Details</th>
-                        <th scope="col">Filed_Date</th>       
+                        <th scope="col">Reason</th>       
                         <th scope="col">Status</th>
                       </tr>
                     </thead>
@@ -117,12 +117,12 @@ $sql = "SELECT r.id, r.name,
            r.police_assign,
            r.category,
            r.description,
-           r.file_date,
+           r.reason,
            r.finish
         FROM reports AS r
         INNER JOIN residents AS u 
         ON r.user_id = u.id
-        WHERE r.finish = 'Reject'";
+        WHERE r.finish = 'Rejected'";
 
 // Executing the query using PostgreSQL
 $result = pg_query($conn, $sql);
@@ -133,7 +133,7 @@ while ($row = pg_fetch_assoc($result)) {
   echo "<td>" . htmlspecialchars($row['name']) . "</td>";
   echo "<td>" . htmlspecialchars($row['category']) . "</td>";
   echo "<td>" . htmlspecialchars($row['description']) . "</td>";
-  echo "<td>" . htmlspecialchars($row['file_date']) . "</td>";
+  echo "<td>" . htmlspecialchars($row['reason']) . "</td>";
   echo "<td>" . htmlspecialchars($row['finish']) . "</td>";
   echo "</tr>";
 }
