@@ -93,14 +93,15 @@ if ($type === 'status') {
     $closureSummary = $data['closureSummary'];
     $closureReason = $data['closureReason'];
 
-    // Handle file upload
-    if (isset($_FILES['courtDecisionLetter']) && $_FILES['courtDecisionLetter']['error'] === UPLOAD_ERR_OK) {
-        $fileTmpPath = $_FILES['courtDecisionLetter']['tmp_name'];
-        $fileName = $_FILES['courtDecisionLetter']['name'];
-        $fileSize = $_FILES['courtDecisionLetter']['size'];
-        $fileType = $_FILES['courtDecisionLetter']['type'];
-
-        // Define directory where files will be stored (directly in 'uploads/')
+    // Handle file upload from base64
+    if (isset($data['file'])) {
+        // Decode the base64 string (removing the prefix)
+        $fileData = base64_decode($data['file']);
+        
+        // Generate a unique filename for the uploaded file
+        $fileName = 'court_decision_' . uniqid() . '.pdf'; // Change extension based on file type if needed
+        
+        // Define the directory where files will be stored
         $uploadDir = 'uploads/';
         $fileDest = $uploadDir . $fileName;
 
@@ -109,10 +110,10 @@ if ($type === 'status') {
             mkdir($uploadDir, 0777, true);
         }
 
-        // Move the file to the target directory
-        if (move_uploaded_file($fileTmpPath, $fileDest)) {
+        // Save the decoded file to the server
+        if (file_put_contents($fileDest, $fileData)) {
             // File uploaded successfully
-            $uploadedFileName = $fileName; // Store the file name for the database
+            $uploadedFileName = $fileName; // Store the file name for database purposes
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Error uploading the file.']);
             exit();
@@ -163,7 +164,7 @@ if ($type === 'status') {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
     }
-}else {
+} else {
     echo json_encode(['status' => 'error', 'message' => 'Invalid update type.']);
 }
 ?>
