@@ -204,7 +204,6 @@ while ($row = pg_fetch_array($result)) {
     echo "<td>".$row['name']."</td>";
     echo "<td>".$row['category']."</td>";
     echo "<td>".$row['description']."</td>";
-    echo "<td>".$row['police_assign']."</td>";
     echo "<td>".$row['file_date']."</td>";
     echo "<td>
             <button class='btn btn-sm btn-primary remove-btn' 
@@ -213,7 +212,6 @@ while ($row = pg_fetch_array($result)) {
                     data-name='".$row['name']."' 
                     data-category='".$row['category']."' 
                     data-description='".$row['description']."'
-                    data-police_assign='".$row['police_assign']."'
                     data-file_date='".$row['file_date']."'>Remove</button>
           </td>";
     echo "</tr>";
