@@ -175,7 +175,6 @@
                         <th scope="col">Case</th>
                         <th scope="col">Details</th>
                         <th scope="col">File Date</th>
-                        <th scope="col">Action</th>
 
                       
                       </tr>
@@ -207,15 +206,7 @@ while ($row = pg_fetch_array($result)) {
     echo "<td>".$row['category']."</td>";
     echo "<td>".$row['description']."</td>";
     echo "<td>".$row['file_date']."</td>";
-    echo "<td>
-            <button class='btn btn-sm btn-primary remove-btn' 
-                    data-id='".$row['id']."' 
-                    data-username='".$row['username']."' 
-                    data-name='".$row['name']."' 
-                    data-category='".$row['category']."' 
-                    data-description='".$row['description']."' 
-                    data-file_date='".$row['file_date']."'>Remove</button>
-          </td>";
+    // Remove the "Remove" button
     echo "</tr>";
 }
 ?>
