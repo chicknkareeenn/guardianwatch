@@ -307,8 +307,14 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
           `;
         } else if (type === 'followup') {
         dynamicFields.innerHTML = `
-          <label for="followUpDetails" class="form-label">Follow-Up Requirements:</label>
-          <textarea id="followUpDetails" class="form-control" rows="3" placeholder="Enter follow-up requirements"></textarea>
+          <label for="reqDetails" class="form-label">Follow-up Requirements:</label>
+              <textarea id="reqDetails" class="form-control" rows="3" placeholder="Enter Follow-up Requirements"></textarea>
+              
+              <label for="reqDate" class="form-label mt-3">Submission Date:</label>
+              <input type="date" id="reqDate" class="form-control">
+              
+              <label for="reqTime" class="form-label mt-3">Select Time:</label>
+              <input type="time" id="reqTime" class="form-control">
         `;
       } 
     });
@@ -327,6 +333,10 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
         data.scheduleDetails = document.getElementById('scheduleDetails').value;
         data.scheduleDate = document.getElementById('scheduleDate').value;
         data.scheduleTime = document.getElementById('scheduleTime').value;
+      }else if (type === 'followup') {
+        data.reqDetails = document.getElementById('reqDetails').value;
+        data.reqDate = document.getElementById('reqDate').value;
+        data.reqTime = document.getElementById('reqTime').value;
       }else if (type === 'closure') {
         data.closureSummary = document.getElementById('closureSummary').value;
         data.closureReason = document.getElementById('closureReason').value;
@@ -346,9 +356,7 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
             reader.readAsDataURL(file); // Read the file as base64
             return; // Prevent form submission until file is read
         }
-    } else if (type === 'followup') {
-        data.followUpDetails = document.getElementById('followUpDetails').value;
-      } else if (type === 'feedback') {
+    } else if (type === 'feedback') {
         data.feedbackPrompt = document.getElementById('feedbackPrompt').value;
       }
     
