@@ -58,7 +58,7 @@ $policeAssign = isset($_SESSION['id']) ? $_SESSION['id'] : '';
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>On Going</h1>
+      <h1>On Going Reports</h1>
       <nav>
       </nav>
     </div><!-- End Page Title -->
