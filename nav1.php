@@ -112,6 +112,12 @@ $result_notifications = pg_query($conn, $sql_notifications);
                 <span>On-Going Reports</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="adminclosed.php" style="background-color:#add8e6;color: #184965;">
+                <i class="bi bi-card-list" style="color: #184965;"></i>
+                <span>Solved Reports</span>
+            </a>
+        </li>
         
         <li class="nav-item">
             <a class="nav-link collapsed" href="reject.php" style="background-color:#add8e6;color: #184965;">
