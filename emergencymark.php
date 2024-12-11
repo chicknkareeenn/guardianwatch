@@ -13,7 +13,7 @@ if (!$conn) {
 }
 
 // Fetch markers from the emergency table where status is not 'Respond' or is NULL
-$sql = "SELECT id, lat, location FROM emergency WHERE status != 'Respond' OR status IS NULL"; // Update the SQL query
+$sql = "SELECT id, lat, location FROM emergency WHERE status IS NULL"; // Update the SQL query
 $result = pg_query($conn, $sql);
 
 if (!$result) {
