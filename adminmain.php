@@ -42,16 +42,17 @@ while ($row_category = pg_fetch_assoc($result_category)) {
 // Query to get total crimes reported by month for the selected year
 $sql_monthly = "
 SELECT 
-    TO_CHAR(file_date, 'YYYY-Mon') AS month,
+    TO_CHAR(file_date, 'YYYY-Mon') AS month,  -- Keep the month in 'YYYY-Mon' format
+    EXTRACT(MONTH FROM file_date) AS month_num,  -- Extract the month number for sorting
     COUNT(*) AS total_crimes
 FROM 
     reports
 WHERE 
     EXTRACT(YEAR FROM file_date) = $selected_year
 GROUP BY 
-    month
+    month, month_num  -- Group by both month and month_num
 ORDER BY 
-    month
+    month_num  -- Sort by the extracted month number
 ";
 $result_monthly = pg_query($conn, $sql_monthly);
 
