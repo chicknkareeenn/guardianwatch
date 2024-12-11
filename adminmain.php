@@ -117,7 +117,7 @@ $query_barangay = "SELECT address, COUNT(*) AS count
                    WHERE category = '$most_reported_category' and EXTRACT(YEAR FROM file_date) = $selected_year
                    GROUP BY address
                    ORDER BY count DESC
-                   LIMIT 5";
+                   LIMIT 3";
 $result_barangay = pg_query($conn, $query_barangay);
 
 // Prepare the data for the Donut Chart
