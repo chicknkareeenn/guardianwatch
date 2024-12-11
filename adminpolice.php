@@ -198,7 +198,7 @@
 
                               // Fetch and display the options
                               while ($row = pg_fetch_assoc($result)) {
-                                  echo "<option value='" . $row['id'] . "'>" . $row['category'] . "</option>";
+                                  echo "<option value='" . $row['category'] . "'>" . $row['category'] . "</option>";
                               }
                           ?>
 
