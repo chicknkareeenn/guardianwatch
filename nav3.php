@@ -147,7 +147,7 @@ $result_notifications = pg_query($conn, $sql_notifications);
         <li class="nav-item">
             <a class="nav-link collapsed" href="closed.php" style="background-color:#add8e6;color: #184965;">
                 <i class="bi bi-card-list" style="color: #184965;"></i>
-                <span>Solved Reports</span>
+                <span>Closed Reports</span>
             </a>
         </li>
         
