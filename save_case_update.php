@@ -163,7 +163,45 @@ if ($type === 'status') {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
     }
-}else {
+}elseif ($type === 'followup') {
+        // If the update type is schedule (Interview/Court Dates)
+        $reqDetails = $data['reqDetails'];
+        $reqDate = $data['reqDate'];
+        $reqTime = $data['reqTime'];
+
+        // Fetch the necessary report data
+        $query = "SELECT user_id, name, category, description, police_assign, file_date FROM reports WHERE id = $1";
+        $result = pg_prepare($conn, "fetch_report_data_schedule", $query);
+        $result = pg_execute($conn, "fetch_report_data_schedule", array($reportId));
+
+        if ($row = pg_fetch_assoc($result)) {
+            $userId = $row['user_id'];
+            $fullname = $row['name'];
+            $category = $row['category'];
+            $details = $row['description'];
+            $police = $row['police_assign'];
+            $file_date = $row['file_date']; 
+
+            // Prepare and execute the query to insert into the files table with schedule details
+            $notificationMessage = "Follow-up Requirements : $reqDetails on $reqDate at $reqTime.";
+
+            $notificationQuery = "
+                INSERT INTO files (reportid, user_id, fullname, notes, police, category, details, file_date, time)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            ";
+            $notificationStmt = pg_prepare($conn, "insert_schedule_file", $notificationQuery);
+            $notificationResult = pg_execute($conn, "insert_schedule_file", array($reportId, $userId, $fullname, $notificationMessage, $police, $category, $details, $file_date));
+
+            if (pg_affected_rows($notificationResult) > 0) {
+                echo json_encode(['status' => 'success', 'message' => 'Schedule details saved successfully.']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Error inserting schedule into files table.']);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
+        }
+    }
+else {
     echo json_encode(['status' => 'error', 'message' => 'Invalid update type.']);
 }
 ?>
