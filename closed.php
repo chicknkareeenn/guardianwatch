@@ -133,7 +133,7 @@
   <audio id="alertSound" src="alert.mp3" preload="auto"></audio>
 
     <div class="pagetitle">
-      <h1>Closed Cases</h1>
+      <h1>Closed Reports</h1>
 
       <nav>
        
