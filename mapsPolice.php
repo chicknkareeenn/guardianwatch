@@ -82,13 +82,26 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize the map
-            const map = L.map('map').setView([14.06702850055952, 120.62615777059939], 13);
+            const map = L.map('map').setView([14.0688, 120.6289], 13);
 
             // Add OpenStreetMap tile layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
+            
             L.control.locate().addTo(map);
+
+            const fixedLocationIcon = L.icon({
+                iconUrl: 'locate.png', // Path to your marker icon
+                iconSize: [40, 40],
+                iconAnchor: [25, 50],
+                popupAnchor: [0, -50],
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                shadowSize: [50, 64]
+            });
+
+            const fixedMarker = L.marker([14.0688, 120.6289], { icon: fixedLocationIcon }).addTo(map);
+            fixedMarker.bindPopup("<b>Your Location:</b><br>J P Laurel St, Nasugbu, Batangas, Philippines").openPopup();
 
             // Define custom icons
             const blueCircleIcon = L.icon({
@@ -131,52 +144,42 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
                         <button class="respond-button" data-marker-id="${marker.id}">Respond</button>
                     `).on('click', (e) => {
                         const latLng = e.target.getLatLng();
+
+                        const fixedStartLatLng = L.latLng(14.0688, 120.6289);
                         // Get current location
-                        if (map.locate) {
-                            map.locate({setView: true, maxZoom: 16});
-                            map.on('locationfound', (event) => {
-                                // Remove previous routing
-                                if (routingControl) {
-                                    map.removeControl(routingControl);
-                                }
+                        if (routingControl) {
+                                map.removeControl(routingControl);
+                            }
 
-                                // Add a routing control
-                                routingControl = L.Routing.control({
-                                    waypoints: [
-                                        L.latLng(event.latitude, event.longitude),
-                                        L.latLng(latLng.lat, latLng.lng)
-                                    ],
-                                    routeWhileDragging: true
-                                }).addTo(map);
-                            });
-                        }
-                    });
-                    
-                    // Store the marker in the markerLayers object
-                    markerLayers[marker.id] = newMarker;
-                }
-            });
+                            routingControl = L.Routing.control({
+                                waypoints: [
+                                    fixedStartLatLng,
+                                    L.latLng(latLng.lat, latLng.lng)
+                                ],
+                                routeWhileDragging: true
+                            }).addTo(map);
+                        });
 
-            // Remove markers that are no longer in the data
-            for (let id in markerLayers) {
-                if (!data.markers.find(marker => marker.id == id)) {
-                    map.removeLayer(markerLayers[id]);
-                    delete markerLayers[id];
+                        markerLayers[marker.id] = newMarker;
+                    }
+                });
+
+                for (let id in markerLayers) {
+                    if (!data.markers.find(marker => marker.id == id)) {
+                        map.removeLayer(markerLayers[id]);
+                        delete markerLayers[id];
+                    }
                 }
+            },
+            error: (xhr, status, error) => {
+                console.error('Error fetching marker data:', error);
             }
-        },
-        error: (xhr, status, error) => {
-            console.error('Error fetching marker data:', error);
-        }
-    });
-};
-
-            // Fetch markers initially
-            fetchMarkers();
-
-            // Fetch markers periodically (every 30 seconds)
-            setInterval(fetchMarkers, 30000);
         });
+    };
+
+    fetchMarkers();
+    setInterval(fetchMarkers, 30000);
+});
     </script>
 
     <script>
