@@ -121,7 +121,7 @@ $most_reported_category = pg_fetch_assoc($result)['category'];
 // Query to get the distribution of the most reported category by barangay
 $query_barangay = "SELECT address, COUNT(*) AS count
                    FROM reports
-                   WHERE category = '$most_reported_category'
+                   WHERE category = '$most_reported_category' AND police_assign = $policeAssign AND EXTRACT(YEAR FROM file_date) = $selected_year
                    GROUP BY address
                    ORDER BY count DESC
                    LIMIT 5";
