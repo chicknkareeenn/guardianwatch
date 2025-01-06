@@ -8,27 +8,23 @@ if (!isset($_SESSION['role']) || (trim($_SESSION['role']) == '')) {
 }
 
 $selected_year = isset($_POST['year']) ? intval($_POST['year']) : date("Y");
+$selected_month = isset($_POST['month']) ? intval($_POST['month']) : null;
 
-// Query to count new reports for the selected year
-$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish IS NULL AND EXTRACT(YEAR FROM file_date) = $selected_year";
+// Build the additional condition for the selected month
+$month_condition = $selected_month ? "AND EXTRACT(MONTH FROM file_date) = $selected_month" : "";
+
+// Query to count new reports for the selected year and month
+$sql = "SELECT COUNT(*) AS count FROM reports WHERE finish IS NULL AND EXTRACT(YEAR FROM file_date) = $selected_year $month_condition";
 $result = pg_query($conn, $sql);
-
 $count = ($result) ? pg_fetch_result($result, 0, 'count') : 0;
 
-// Query to count available police
-$sql_police = "SELECT COUNT(*) AS police_count FROM police WHERE status = 'Available'";
-$result_police = pg_query($conn, $sql_police);
-
-$police_count = ($result_police) ? pg_fetch_result($result_police, 0, 'police_count') : 0;
-
-// Query to count ongoing cases for the selected year
-$sql_cases = "SELECT COUNT(*) AS ongoing_count FROM reports WHERE finish = 'Ongoing' AND EXTRACT(YEAR FROM file_date) = $selected_year";
+// Query to count ongoing cases for the selected year and month
+$sql_cases = "SELECT COUNT(*) AS ongoing_count FROM reports WHERE finish = 'Ongoing' AND EXTRACT(YEAR FROM file_date) = $selected_year $month_condition";
 $result_cases = pg_query($conn, $sql_cases);
-
 $ongoing_count = ($result_cases) ? pg_fetch_result($result_cases, 0, 'ongoing_count') : 0;
 
-// Query to get total crimes by category for the selected year
-$sql_category = "SELECT category, COUNT(*) AS category_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year GROUP BY category";
+// Query to get total crimes by category for the selected year and month
+$sql_category = "SELECT category, COUNT(*) AS category_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year $month_condition GROUP BY category";
 $result_category = pg_query($conn, $sql_category);
 $category_data = [];
 $category_labels = [];
@@ -39,21 +35,20 @@ while ($row_category = pg_fetch_assoc($result_category)) {
     $category_counts[] = $row_category['category_count'];
 }
 
-// Query to get total crimes reported by month for the selected year
+// Query to get total crimes reported by month for the selected year and optionally month
 $sql_monthly = "
 SELECT 
-    TO_CHAR(file_date, 'YYYY-Mon') AS month,  -- Keep the month in 'YYYY-Mon' format
-    EXTRACT(MONTH FROM file_date) AS month_num,  -- Extract the month number for sorting
+    TO_CHAR(file_date, 'YYYY-Mon') AS month,
+    EXTRACT(MONTH FROM file_date) AS month_num,
     COUNT(*) AS total_crimes
 FROM 
     reports
 WHERE 
     EXTRACT(YEAR FROM file_date) = $selected_year
 GROUP BY 
-    month, month_num  -- Group by both month and month_num
+    month, month_num
 ORDER BY 
-    month_num  -- Sort by the extracted month number
-";
+    month_num";
 $result_monthly = pg_query($conn, $sql_monthly);
 
 $monthly_data = [];
@@ -61,13 +56,13 @@ $monthly_labels = [];
 
 if ($result_monthly) {
     while ($row_monthly = pg_fetch_assoc($result_monthly)) {
-        $monthly_labels[] = $row_monthly['month']; // Store month in YYYY-MMM format
-        $monthly_data[] = $row_monthly['total_crimes']; // Store the count of crimes
+        $monthly_labels[] = $row_monthly['month'];
+        $monthly_data[] = $row_monthly['total_crimes'];
     }
 }
 
-// Query to get emergency locations for the selected year
-$sql_emergency = "SELECT location, lat FROM emergency WHERE EXTRACT(YEAR FROM report_date) = $selected_year";
+// Query to get emergency locations for the selected year and month
+$sql_emergency = "SELECT location, lat FROM emergency WHERE EXTRACT(YEAR FROM report_date) = $selected_year $month_condition";
 $result_emergency = pg_query($conn, $sql_emergency);
 
 $emergency_locations = [];
@@ -84,8 +79,8 @@ if ($result_emergency) {
     }
 }
 
-$male_query = "SELECT COUNT(*) as male_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year and gender = 'Male'";
-$female_query = "SELECT COUNT(*) as female_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year and gender = 'Female'";
+$male_query = "SELECT COUNT(*) as male_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year $month_condition and gender = 'Male'";
+$female_query = "SELECT COUNT(*) as female_count FROM reports WHERE EXTRACT(YEAR FROM file_date) = $selected_year $month_condition and gender = 'Female'";
 
 $male_result = pg_query($conn, $male_query);
 $female_result = pg_query($conn, $female_query);
@@ -115,7 +110,7 @@ $most_reported_category = pg_fetch_assoc($result)['category'];
 // Query to get the distribution of the most reported category by barangay
 $query_barangay = "SELECT address, COUNT(*) AS count
                    FROM reports
-                   WHERE category = '$most_reported_category' and EXTRACT(YEAR FROM file_date) = $selected_year
+                   WHERE category = '$most_reported_category' and EXTRACT(YEAR FROM file_date) = $selected_year $month_condition
                    GROUP BY address
                    ORDER BY count DESC
                    LIMIT 3";
@@ -228,6 +223,18 @@ $barangay_json = json_encode($barangay_data);
       font-weight: bold;
       color: #184965;
     }
+    .month-filter {
+      display: flex;
+      align-items: center;
+      margin-left: 20px;
+    }
+
+    .month-filter label {
+      margin-right: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #184965;
+    }
 
     .dropdown-container {
       display: inline-block; /* Ensures the dropdown is inline with the label */
@@ -251,29 +258,53 @@ $barangay_json = json_encode($barangay_data);
     <audio id="alertSound" src="alert.mp3" preload="auto"></audio>
 
     <div class="pagetitle">
-      <h1>Dashboard</h1>
+    <h1>Dashboard</h1>
 
-      <div style="display: flex; align-items: center;"> 
-          <i class="fas fa-clock" style="font-size: 20px; color: #184965; margin-right: -5px;"></i>
-          <div id="clock" style="font-size: 20px; font-weight: bold; color: #184965; margin-right: 15px;"></div>
+    <div style="display: flex; align-items: center;">
+        <i class="fas fa-clock" style="font-size: 20px; color: #184965; margin-right: -5px;"></i>
+        <div id="clock" style="font-size: 20px; font-weight: bold; color: #184965; margin-right: 15px;"></div>
 
-          <i class="fas fa-calendar-alt" style="font-size: 20px; color: #184965; margin-right: 7px; margin-left:100px;"></i>
-          <div id="date" style="font-size: 20px; font-weight: bold; color: #184965;"></div>
-      </div>
+        <!-- Filter by Month -->
+        <div class="month-filter" style="margin-left: 100px; display: flex; align-items: center;">
+        <i class="fas fa-filter" style="font-size: 17px; color: #184965; margin-right: 7px;"></i>
+            <label for="month">Filter Month:</label>
+            <form method="POST" action="" style="display: inline;">
+                <input type="hidden" name="year" value="<?php echo isset($_POST['year']) ? $_POST['year'] : $selected_year; ?>"> <!-- Persist year -->
+                <select name="month" id="month" onchange="this.form.submit();">
+                    <?php 
+                    $months = [
+                        "January", "February", "March", "April", "May", "June", 
+                        "July", "August", "September", "October", "November", "December"
+                    ];
+                    foreach ($months as $index => $month): ?>
+                        <option value="<?php echo $index + 1; ?>" <?php if (($index + 1) == $selected_month) echo 'selected'; ?>>
+                            <?php echo $month; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+        </div>
+    </div>
 
-      <div class="year-filter">
+    <div style="display: flex; align-items: center;">
+        <!-- Filter by Year -->
+        <div class="year-filter">
             <i class="fas fa-filter" style="font-size: 17px; color: #184965; margin-right: 7px;"></i>
             <label for="year">Filter Year:</label>
             <form method="POST" action="">
-              <select name="year" id="year" onchange="this.form.submit();">
-                <?php for ($i = 2000; $i <= date("Y"); $i++): ?>
-                  <option value="<?php echo $i; ?>" <?php if ($i == $selected_year) echo 'selected'; ?>><?php echo $i; ?></option>
-                <?php endfor; ?>
-              </select>
+                <input type="hidden" name="month" value="<?php echo isset($_POST['month']) ? $_POST['month'] : $selected_month; ?>"> <!-- Persist month -->
+                <select name="year" id="year" onchange="this.form.submit();">
+                    <?php for ($i = 2000; $i <= date("Y"); $i++): ?>
+                        <option value="<?php echo $i; ?>" <?php if ($i == $selected_year) echo 'selected'; ?>>
+                            <?php echo $i; ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
             </form>
-          </div>
         </div>
     </div>
+</div>
+
 
 
     <section class="section dashboard">
@@ -320,7 +351,7 @@ $barangay_json = json_encode($barangay_data);
           <div class="col-xxl-3 col-md-6">
             <div class="card info-card sales-card">
               <div class="card-body">
-                <h5 class="card-title" style="font-size: 14px;">Gender Distribution of Reports</h5>
+                <h5 class="card-title" style="font-size: 14px;">Sex Distribution of Reports</h5>
                 <div class="d-flex align-items-center justify-content-center" style="margin-top: -20px;">
                   <canvas id="genderPieChart" style="max-width: 180px; max-height: 89px;"></canvas>
                 </div>
