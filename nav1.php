@@ -1,5 +1,4 @@
 <?php
-session_start();
 include('dbcon.php'); // Ensure dbcon.php connects to PostgreSQL
 
 // Fetch the notification count from the emergency table
