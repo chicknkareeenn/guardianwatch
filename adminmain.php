@@ -262,19 +262,29 @@ $barangay_json = json_encode($barangay_data);
       </div>
 
       <div class="year-filter">
-            <i class="fas fa-filter" style="font-size: 17px; color: #184965; margin-right: 7px;"></i>
-            <label for="year">Filter Year:</label>
-            <form method="POST" action="">
-              <select name="year" id="year" onchange="this.form.submit();">
-                <?php for ($i = 2000; $i <= date("Y"); $i++): ?>
-                  <option value="<?php echo $i; ?>" <?php if ($i == $selected_year) echo 'selected'; ?>><?php echo $i; ?></option>
-                <?php endfor; ?>
-              </select>
-            </form>
-          </div>
-        </div>
-    </div>
+    <i class="fas fa-filter" style="font-size: 17px; color: #184965; margin-right: 7px;"></i>
+    <label for="year">Filter Year:</label>
+    <form method="POST" action="">
+        <select name="year" id="year" onchange="this.form.submit();">
+            <?php for ($i = 2000; $i <= date("Y"); $i++): ?>
+                <option value="<?php echo $i; ?>" <?php if ($i == $selected_year) echo 'selected'; ?>>
+                    <?php echo $i; ?>
+                </option>
+            <?php endfor; ?>
+        </select>
 
+        <label for="month">Filter Month:</label>
+        <select name="month" id="month" onchange="this.form.submit();">
+            <option value="">All Months</option>
+            <?php for ($m = 1; $m <= 12; $m++): ?>
+                <option value="<?php echo $m; ?>" <?php if (isset($selected_month) && $selected_month == $m) echo 'selected'; ?>>
+                    <?php echo date("F", mktime(0, 0, 0, $m, 1)); ?>
+                </option>
+            <?php endfor; ?>
+        </select>
+    </form>
+</div>
+      
 
     <section class="section dashboard">
       <div class="container">
